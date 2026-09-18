@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/casepage.tsx","./src/clinicalworkspace.tsx","./src/dashboard.tsx","./src/governance.tsx","./src/noteeditor.tsx","./src/dates.test.ts","./src/dates.ts","./src/i18n.ts","./src/main.tsx","./src/types.ts","./src/ui.tsx","./src/workflowtranslations.ts","./src/api/client.test.ts","./src/api/client.ts","./src/api/generated.ts"],"version":"5.8.3"}

@@ -1,0 +1,6 @@
+Synthetic teaching record. Not real patient data. No clinical validation implied.
+allergy.substance=DEMO-A
+medication.substance=DEMO-A
+lab.potassium=4.0
+imaging.side=left
+Confirm substance identities, order status, units and timestamps manually.

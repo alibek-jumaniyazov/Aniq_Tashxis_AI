@@ -1,0 +1,17 @@
+# Optional Linux/NVIDIA profile; requires Docker Desktop GPU support or Linux.
+services:
+  migrate:
+    build:
+      args:
+        INSTALL_AI: 'true'
+  worker:
+    environment:
+      MODEL_GPU_MEMORY_GB: ${MODEL_GPU_MEMORY_GB:-3}
+      MODEL_CPU_MEMORY_GB: ${MODEL_CPU_MEMORY_GB:-4}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
