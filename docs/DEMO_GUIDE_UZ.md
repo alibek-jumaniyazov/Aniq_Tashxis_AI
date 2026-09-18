@@ -13,7 +13,7 @@ Bu ssenariy sintetik ma’lumotlarda dastur oqimini ko‘rsatadi. Tibbiy samarad
 
 Tayyor ish navbatlari bilan namoyish uchun [SEED_GUIDE_UZ.md](SEED_GUIDE_UZ.md) dan foydalaning: 18 ta holat, 7 rol va davom ettirish mumkin bo‘lgan ekspert/hisobot jarayonlari bor. Quyidagi yo‘l yangi holatni boshidan yaratishni ko‘rsatadi.
 
-**1. Manba va tasdiq.** Yangi holat yarating, 18 yoshdan katta sintetik yosh kiriting. `Hujjat yuklash` orqali `demo/clinical-record.txt` faylini qo‘shing. Manbani oching: asl matn va koordinatalar saqlangan. Avtomatik draftlar shifokor tekshirmaguncha tahlil faktlariga aylanmaydi. Qiymat, inkor, vaqt va birlikni ko‘rib tasdiqlang. Dori faol holatini alohida tekshiring.
+**1. Manba va tasdiq.** Yangi holat oynasida sintetik bemorning F.I.Sh. ni kiriting; kod avtomatik yaratiladi. Qolgan maydonlar ixtiyoriy. Diagnostik AI namoyishi uchun bemor yoshini ham (18 yoshdan katta sintetik qiymat) kiriting. `Hujjat yuklash` orqali `demo/clinical-record.txt` faylini qo‘shing. Manbani oching: asl matn va koordinatalar saqlangan. Avtomatik draftlar shifokor tekshirmaguncha tahlil faktlariga aylanmaydi. Qiymat, inkor, vaqt va birlikni ko‘rib tasdiqlang. Dori faol holatini alohida tekshiring.
 
 **2. Haqiqiy lokal AI.** Oddiy matnli hujjatda `Faktlarni ajratish · MedGemma` tugmasini bosing. Model o‘zi taklif qiladi; API iqtibosni asl matndan tekshiradi. AI mavjud bo‘lmasa yoki matn kontekstdan katta bo‘lsa, sabab ko‘rsatiladi. Soxta muvaffaqiyat yaratilmaydi. `Tekshiruvni boshlash` tasdiqlangan faktlar bo‘yicha yangi versiyali job yaratadi. AI sharhi, bajarilgan demo qoidalar va tekshirib bo‘lmagan qismlarni alohida tushuntiring.
 

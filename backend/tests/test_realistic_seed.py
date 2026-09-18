@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from app.config import settings
-from app.db import Base, Job, Record, SessionLocal, engine
+from app.db import Base, Job, Record, SessionLocal, User, engine
 from app.demo_seed import seed_realistic, verify_seed
 from app.main import app, login_attempts
 from conftest import sign_in
@@ -31,10 +31,14 @@ def post(client, path, body):
 
 def test_seed_references_files_timeline_and_idempotency(seeded):
     counts = verify_seed()
-    assert counts['cases'] == 19 and counts['users'] == 8
+    assert counts['cases'] == 19 and counts['users'] == 9
     assert seed_realistic() is False
     assert counts == verify_seed()
     with SessionLocal() as db:
+        users = list(db.scalars(select(User)))
+        assert len([u for u in users if u.tenant_id in {'avilab-demo', 'other-demo'}]) == 8
+        platform = [u for u in users if u.tenant_id == 'avilab-platform']
+        assert len(platform) == 1 and platform[0].role == 'developer'
         for fact in db.scalars(select(Record).where(Record.kind == 'fact')):
             source = db.get(Record, fact.data['source_id'])
             match = re.fullmatch(r'page:(\d+):chars:(\d+)-(\d+)', fact.data['span'])
@@ -47,6 +51,7 @@ def test_seed_references_files_timeline_and_idempotency(seeded):
         for job in db.scalars(select(Job)):
             assert job.created_at <= job.started_at <= job.finished_at
             assert job.result['ai'] is None and not job.payload['include_ai']
+            assert not {'full_name', 'patient_phone'} & job.payload['snapshot'].keys()
             assert all(f['case_version'] <= job.case_version for f in job.payload['snapshot']['facts'])
 
 

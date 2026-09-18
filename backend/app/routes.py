@@ -8,9 +8,9 @@ from argon2.exceptions import VerificationError
 from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session as DBSession
 from .config import settings
-from .db import Case, CaseAccess, Job, Record, Session, User, get_db, now
+from .db import Case, CaseAccess, Job, PatientCodeAllocation, Record, Session, User, get_db, now
 from .schemas import AnalysisCreate, AuthResponse, CaseCreate, ConfirmFacts, FactInput, FactsPatch, ForecastCreate, ImportCreate, Login, NoteCreate, NoteDraft, ReviewCreate, VersionBody
-from .security import ApiError, access_case, access_record, audit, bump_case, create_record, current_facts, current_user, idem_key, idempotent, require_role, serialize
+from .security import ApiError, access_case, access_record, account_enabled, audit, bump_case, create_record, current_facts, current_user, idem_key, idempotent, require_role, serialize
 from . import jobs
 
 router = APIRouter(prefix='/api/v1')
@@ -18,18 +18,27 @@ password_hasher = PasswordHasher()
 
 
 def case_json(case):
-    return {'id': case.id, 'alias': case.alias, 'age': case.age, 'sex': case.sex, 'summary': case.summary, 'diagnosis': case.diagnosis, 'version': case.version, 'demo': case.demo, 'owner_id': case.owner_id, 'created_at': case.created_at.isoformat(), 'updated_at': case.updated_at.isoformat()}
+    return {'id': case.id, 'alias': case.alias, 'full_name': case.full_name, 'patient_phone': case.patient_phone, 'age': case.age, 'sex': case.sex, 'summary': case.summary, 'diagnosis': case.diagnosis, 'version': case.version, 'demo': case.demo, 'owner_id': case.owner_id, 'created_at': case.created_at.isoformat(), 'updated_at': case.updated_at.isoformat()}
+
+
+def case_snapshot(case):
+    """Registration identity is not clinical evidence or model input."""
+    return {key: value for key, value in case_json(case).items() if key not in {'full_name', 'patient_phone'}}
 
 
 def user_json(user):
-    return {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role, 'tenant_id': user.tenant_id}
+    from sqlalchemy.orm import object_session
+    from .billing_models import Clinic
+    db = object_session(user)
+    clinic = db.get(Clinic, user.tenant_id) if db else None
+    return {'id': user.id, 'name': user.name, 'email': user.email, 'role': user.role, 'tenant_id': user.tenant_id, 'is_clinic_owner': bool(clinic and clinic.owner_id == user.id)}
 
 
 @router.post('/auth/login', response_model=AuthResponse)
 def login(body: Login, response: Response, db: DBSession = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == body.email.lower(), User.active.is_(True)))
     valid = False
-    if user:
+    if account_enabled(user):
         try:
             valid = password_hasher.verify(user.password_hash, body.password)
         except VerificationError:
@@ -64,10 +73,13 @@ def list_cases(q: str = '', bucket: str = 'all', page: int = 1, page_size: int =
     require_role(user, 'doctor', 'radiologist', 'expert', 'quality', 'sender')
     granted = select(CaseAccess.case_id).where(CaseAccess.user_id == user.id)
     query = select(Case).where(Case.tenant_id == user.tenant_id, Case.archived.is_(False), or_(Case.owner_id == user.id, Case.id.in_(granted)))
-    if q:
-        term = '%' + q.strip()[:100] + '%'
-        query = query.where(or_(Case.alias.ilike(term), Case.summary.ilike(term), Case.diagnosis.ilike(term)))
     cases = list(db.scalars(query.order_by(Case.updated_at.desc())))
+    if q.strip():
+        # Python casefold handles Cyrillic and Uzbek names consistently on both
+        # SQLite and PostgreSQL. Phone searches also ignore display punctuation.
+        term = q.strip()[:200].casefold()
+        phone_digits = re.sub(r'\D', '', term)
+        cases = [case for case in cases if any(term in str(value or '').casefold() for value in (case.alias, case.full_name, case.patient_phone, case.summary, case.diagnosis)) or (len(phone_digits) >= 3 and all(char.isdigit() or char in '+- ()' for char in term) and phone_digits in re.sub(r'\D', '', case.patient_phone))]
     stats = {'total': len(cases), 'alerts': 0, 'reviewed': 0, 'analyses': 0}
     items = []
     for case in cases:
@@ -94,7 +106,16 @@ def list_cases(q: str = '', bucket: str = 'all', page: int = 1, page_size: int =
 def create_case(body: CaseCreate, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
     require_role(user, 'doctor')
     def run():
-        case = Case(tenant_id=user.tenant_id, owner_id=user.id, **body.model_dump(), demo=settings.demo_mode)
+        # Database sequence reservations serialize concurrent registrations. Skip
+        # any historical manually assigned codes without renaming old records.
+        while True:
+            reservation = PatientCodeAllocation()
+            db.add(reservation)
+            db.flush()
+            alias = f'AT-{reservation.id:08d}'
+            if not db.scalar(select(Case.id).where(Case.alias == alias).limit(1)):
+                break
+        case = Case(tenant_id=user.tenant_id, owner_id=user.id, alias=alias, **body.model_dump(), demo=settings.demo_mode)
         db.add(case)
         db.flush()
         # Demo collaborators are explicitly granted at creation, never by tenant alone.
@@ -113,7 +134,7 @@ def get_case(case_id: str, user: User = Depends(current_user), db: DBSession = D
     records = list(db.scalars(select(Record).where(Record.case_id == case.id).order_by(Record.created_at.desc())))
     runs = list(db.scalars(select(Job).where(Job.case_id == case.id).order_by(Job.created_at.desc())))
     staff = {u.id: u.name for u in db.scalars(select(User).where(User.tenant_id == user.tenant_id))}
-    studies = [{**serialize(r), 'reviews': [{**serialize(review), 'reviewer_name': staff.get(review.actor_id, '')} for review in records if review.kind == 'imaging_review' and review.data.get('study_id') == r.id]} for r in records if r.kind == 'study']
+    studies = [{**serialize(r), 'reviews': [{**serialize(review), 'reviewer_name': staff.get(review.actor_id, '')} for review in records if review.kind == 'imaging_review' and review.data.get('study_id') == r.id], 'measurements': [serialize(m) for m in records if m.kind == 'imaging_measurement' and m.data.get('study_id') == r.id], 'analyses': [job_json(j, case) for j in runs if j.kind == 'imaging' and j.payload.get('study_id') == r.id]} for r in records if r.kind == 'study']
     alerts = [{**serialize(r), 'reviews': [{**serialize(review), 'reviewer_name': staff.get(review.actor_id, '')} for review in reversed(records) if review.kind == 'review' and review.data.get('alert_id') == r.id]} for r in records if r.kind == 'alert']
     return {**case_json(case), 'facts': current_facts(db, case.id), 'notes': [serialize(r) for r in records if r.kind == 'note'], 'documents': [source_public(r) for r in records if r.kind == 'source'], 'alerts': alerts, 'analyses': [job_json(r, case) for r in runs], 'forecasts': [serialize(r) for r in records if r.kind == 'forecast'], 'studies': studies, 'clinical_conclusions': [serialize(r) for r in records if r.kind == 'clinical_conclusion']}
 
@@ -127,7 +148,7 @@ def source_public(record):
 @router.get('/cases/{case_id}/versions')
 def versions(case_id: str, user: User = Depends(current_user), db: DBSession = Depends(get_db)):
     access_case(db, user, case_id)
-    records = db.scalars(select(Record).where(Record.case_id == case_id, Record.kind.in_(['fact', 'note', 'case_revision', 'clinical_conclusion'])).order_by(Record.case_version.desc(), Record.created_at.desc()))
+    records = db.scalars(select(Record).where(Record.case_id == case_id, Record.kind.in_(['fact', 'note', 'case_revision', 'clinical_conclusion', 'clinical_entry', 'imaging_report'])).order_by(Record.case_version.desc(), Record.created_at.desc()))
     return {'items': [serialize(r) for r in records]}
 
 
@@ -253,9 +274,11 @@ def analyse(case_id: str, body: AnalysisCreate, request: Request, user: User = D
         if any(job.case_id == case.id for job in active):
             raise ApiError(409, 'ANALYSIS_ALREADY_RUNNING', 'An analysis is already running for this case.')
         notes = [serialize(r) for r in db.scalars(select(Record).where(Record.case_id == case.id, Record.kind == 'note').order_by(Record.created_at))]
-        snapshot = {**case_json(case), 'facts': current_facts(db, case.id), 'notes': notes}
+        snapshot = {**case_snapshot(case), 'facts': current_facts(db, case.id), 'notes': notes}
         if body.review_focus == 'clinical_assessment':
             from .clinical import evidence_report
+            if case.age is None or not 18 <= case.age <= 120:
+                raise ApiError(422, 'OUTSIDE_DEMO_SCOPE', 'The current clinical review supports adults with a known age of 18–120 years.')
             quality = evidence_report(snapshot['facts'], body.mode, body.decision_time.isoformat() if body.decision_time else None)
             if not body.include_ai or not quality['clinical_review_ready']:
                 raise ApiError(422, 'INSUFFICIENT_CONFIRMED_EVIDENCE', 'Confirm symptom evidence and at least one additional observation before clinical review.')
@@ -281,9 +304,11 @@ def get_job(job_id: str, user: User = Depends(current_user), db: DBSession = Dep
 
 @router.post('/analyses/{job_id}/retry', status_code=202)
 def retry_job(job_id: str, body: VersionBody, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
-    require_role(user, 'doctor')
+    require_role(user, 'doctor', 'radiologist')
     get_job(job_id, user, db)
     original = db.get(Job, job_id)
+    if user.role == 'radiologist' and original.kind != 'imaging':
+        raise ApiError(403, 'ROLE_FORBIDDEN', 'Only the doctor can retry a clinical text review.')
     case = access_case(db, user, original.case_id)
     def run():
         if case.version != body.expected_version or case.version != original.case_version:
@@ -320,8 +345,10 @@ def get_forecast(forecast_id: str, user: User = Depends(current_user), db: DBSes
 
 @router.post('/analyses/{job_id}/cancel')
 def cancel_job(job_id: str, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
-    require_role(user, 'doctor')
+    require_role(user, 'doctor', 'radiologist')
     get_job(job_id, user, db)
+    if user.role == 'radiologist' and db.get(Job, job_id).kind != 'imaging':
+        raise ApiError(403, 'ROLE_FORBIDDEN', 'Only the doctor can cancel a clinical text review.')
     def run():
         changed = db.execute(update(Job).where(Job.id == job_id, Job.status.in_(['queued', 'running'])).values(status='cancelled', stage='cancelled', finished_at=now()))
         if changed.rowcount != 1:
@@ -389,17 +416,35 @@ def dmed_import(case_id: str, body: ImportCreate, user: User = Depends(current_u
     if body.scenario == 'identity_mismatch' or body.external_id != 'DEMO-001':
         raise ApiError(409, 'PATIENT_IDENTITY_MISMATCH', 'Patient identity mismatch. Merge blocked.')
     def run():
+        db.refresh(case, with_for_update=True)
         ext_version = 2 if body.scenario == 'updated' else 1
         previous = [r for r in db.scalars(select(Record).where(Record.case_id == case_id, Record.kind == 'import')) if r.data.get('external_version') == ext_version]
         if previous:
-            return serialize(previous[0])
+            from .patient_workspace import backfill_legacy_dmed_entries
+            return backfill_legacy_dmed_entries(db, user, case, previous[0], body.expected_version)
         bump_case(db, case, body.expected_version)
-        source = create_record(db, user, 'source', {'name': 'DMED · DEMO-001', 'type': 'dmed_demo', 'text': 'Synthetic import: allergy.substance = DEMO-A; medication.substance = DEMO-A', 'pages': [], 'limitations': ['DEMO_INTEGRATION'], 'external_version': ext_version}, case)
+        from .patient_workspace import create_entry_record
+        demo_entries = [
+            ('subjective', 'Учебная история DMED: периодическая головная боль после нагрузки в течение недели. Со слов пациента, ранее давление повышалось.', '', ''),
+            ('objective', 'Учебный осмотр: артериальное давление 140/90 мм рт. ст., пульс 78/мин. Данные одного визита, повторных измерений нет.', '', ''),
+            ('laboratory', 'Учебный лабораторный документ: глюкоза натощак 5.4 ммоль/л. Другие лабораторные показатели в этом импорте не представлены.', '', ''),
+            ('instrumental', 'Учебное инструментальное исследование: в описании ЭКГ указан синусовый ритм. Оригинал ЭКГ и DICOM в импорте отсутствуют.', '', ''),
+            ('doctor_conclusion', 'Учебное заключение врача DMED: повышение артериального давления требует уточнения по повторным измерениям. Планируется повторный прием с дневником давления; лекарственная терапия в этой записи не указана.', 'Повышение артериального давления, требуется уточнение.', 'Повторный прием с дневником давления; лекарственная терапия не указана.'),
+        ]
+        source_text = 'Synthetic import: allergy.substance = DEMO-A; medication.substance = DEMO-A\n\n' + '\n\n'.join(entry[1] for entry in demo_entries)
+        source = create_record(db, user, 'source', {'name': 'DMED · DEMO-001', 'type': 'dmed_demo', 'text': source_text, 'pages': [], 'limitations': ['DEMO_INTEGRATION'], 'external_version': ext_version}, case)
+        previous_demo = {r.data['category']: r for r in db.scalars(select(Record).where(Record.case_id == case.id, Record.kind == 'clinical_entry').order_by(Record.created_at, Record.id)) if r.data.get('source_mode') == 'dmed_demo'}
+        entry_ids = []
+        for category, text, diagnosis, treatment in demo_entries:
+            entry = create_entry_record(db, user, case, category, text, source=source, diagnosis=diagnosis, treatment=treatment)
+            if category in previous_demo:
+                entry.data = {**entry.data, 'supersedes': previous_demo[category].id}
+            entry_ids.append(entry.id)
         timestamp = '2026-09-18T09:00:00+05:00' if ext_version == 1 else '2026-09-18T14:00:00+05:00'
         for k, value in [('allergy.substance', 'DEMO-A'), ('medication.substance', 'DEMO-A')]:
             fact = FactInput(key=k, label=k, value=value, source_id=source.id, provenance='dmed_demo', span='field:' + k, event_time=timestamp, available_time=timestamp, order_status='active' if k.startswith('medication') else 'not_applicable')
             create_record(db, user, 'fact', fact.model_dump(mode='json'), case)
-        imported = create_record(db, user, 'import', {'source_id': source.id, 'external_version': ext_version, 'mode': 'demo', 'status': 'awaiting_confirmation'}, case)
+        imported = create_record(db, user, 'import', {'source_id': source.id, 'external_version': ext_version, 'mode': 'demo', 'status': 'awaiting_confirmation', 'clinical_entry_ids': entry_ids}, case)
         audit(db, user, 'dmed.imported', imported.id)
         return serialize(imported)
     return idempotent(db, user, f'dmed.import:{case_id}', key, body.model_dump(), run)
@@ -417,27 +462,66 @@ def forecast(case_id: str, body: ForecastCreate, user: User = Depends(current_us
     def run():
         if case.version != body.expected_version:
             raise ApiError(409, 'CASE_VERSION_CONFLICT', 'Refresh this case.')
-        required = {'lab.total_cholesterol', 'vital.systolic_pressure', 'smoking.status'}
-        provided = {f['key'] for f in current_facts(db, case.id) if f.get('confirmed')}
-        result = create_record(db, user, 'forecast', {'outcome_id': body.outcome_id, 'horizon_years': body.horizon_years, 'eligibility_status': 'not_available', 'probability': None, 'model_id': None, 'missing_fields': sorted(required - provided), 'unsupported_reasons': ['VALIDATED_RISK_MODEL_NOT_CONFIGURED'] + (['UNSUPPORTED_HORIZON'] if body.horizon_years not in [1, 3, 5] else []), 'validation_status': 'not_validated'}, case)
+        from .risk import calculate
+        result = create_record(db, user, 'forecast', {**calculate(case, body), 'author_name': user.name}, case)
         audit(db, user, 'forecast.eligibility_checked', result.id)
         return serialize(result)
     return idempotent(db, user, f'forecast:{case_id}', key, body.model_dump(), run)
 
 
+def notification_query(user):
+    require_role(user, 'doctor', 'radiologist', 'expert', 'quality', 'sender')
+    granted = select(CaseAccess.case_id).where(CaseAccess.user_id == user.id)
+    return select(Record).join(Case, Case.id == Record.case_id).where(
+        Record.tenant_id == user.tenant_id,
+        Record.kind == 'notification',
+        Case.tenant_id == user.tenant_id,
+        or_(Case.owner_id == user.id, Case.id.in_(granted)),
+    )
+
+
 @router.get('/notifications')
 def notifications(user: User = Depends(current_user), db: DBSession = Depends(get_db)):
-    granted = select(CaseAccess.case_id).where(CaseAccess.user_id == user.id)
-    owned = select(Case.id).where(Case.owner_id == user.id)
-    records = db.scalars(select(Record).where(Record.tenant_id == user.tenant_id, Record.kind == 'notification', or_(Record.case_id.in_(granted), Record.case_id.in_(owned))).order_by(Record.created_at.desc()).limit(100))
-    return {'items': [serialize(r) for r in records]}
+    query = notification_query(user)
+    # Count read markers separately, without loading historical notification payloads.
+    readers = list(db.scalars(query.with_only_columns(Record.data['read_by'])))
+    records = db.execute(query.add_columns(Case.alias).order_by(Record.created_at.desc(), Record.id.desc()).limit(100))
+    return {
+        'items': [{**serialize(record), 'case_alias': alias} for record, alias in records],
+        'total': len(readers),
+        'unread_count': sum(user.id not in (read_by or []) for read_by in readers),
+    }
+
+
+@router.post('/notifications/read-all')
+def read_all_notifications(user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
+    query = notification_query(user)
+
+    def run():
+        # PostgreSQL locks each row; SQLite's idempotency insert already holds the
+        # write lock. Read after that lock so another reader's markers are preserved.
+        records = db.scalars(query.order_by(Record.id).with_for_update(of=Record).execution_options(populate_existing=True))
+        updated = 0
+        for record in records:
+            readers = record.data.get('read_by') or []
+            if user.id not in readers:
+                record.data = {**record.data, 'read_by': [*readers, user.id]}
+                updated += 1
+        db.flush()
+        remaining = db.scalars(query.with_only_columns(Record.data['read_by']))
+        return {'updated': updated, 'unread_count': sum(user.id not in (read_by or []) for read_by in remaining)}
+
+    return idempotent(db, user, 'notifications:read-all', key, {}, run)
 
 
 @router.post('/notifications/{notification_id}/read')
 def read_notification(notification_id: str, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
     record = access_record(db, user, notification_id, ['notification'])
     def run():
-        readers = list(set(record.data.get('read_by', []) + [user.id]))
-        record.data = {**record.data, 'read_by': readers}
+        # The access check may have loaded this object before another reader wrote.
+        db.refresh(record, with_for_update=True)
+        readers = record.data.get('read_by') or []
+        if user.id not in readers:
+            record.data = {**record.data, 'read_by': [*readers, user.id]}
         return {'read': True}
     return idempotent(db, user, f'notification:{notification_id}', key, {}, run)

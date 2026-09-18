@@ -188,7 +188,7 @@ def download_export(export_id: str, format: str = Query('json', pattern='^(json|
 
 @router.get('/system/status')
 def system_status(user: User = Depends(current_user)):
-    return {'app': 'AniqTashxis.ai', 'version': '0.1.0', 'demo_mode': settings.demo_mode, 'database': 'sqlite_local' if settings.database_url.startswith('sqlite') else 'postgresql', 'queue': settings.queue_mode, 'model': ai.model_status(), 'dmed': 'demo', 'export_transport': 'mock', 'ct_model': 'not_configured', 'risk_model': 'not_configured', 'approved_clinical_rules': 0}
+    return {'app': 'AniqTashxis.ai', 'version': '0.1.0', 'demo_mode': settings.demo_mode, 'database': 'sqlite_local' if settings.database_url.startswith('sqlite') else 'postgresql', 'queue': settings.queue_mode, 'model': ai.model_status(), 'dmed': 'demo', 'export_transport': 'mock', 'ct_model': 'not_configured', 'risk_model': 'framingham-general-cvd-lipids-2008', 'approved_clinical_rules': 0}
 
 
 @router.get('/rules')

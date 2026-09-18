@@ -16,8 +16,9 @@ class UserResponse(StrictModel):
     id: str
     name: str
     email: str
-    role: Literal['doctor', 'radiologist', 'expert', 'quality', 'sender', 'admin', 'analyst']
+    role: Literal['doctor', 'radiologist', 'expert', 'quality', 'sender', 'admin', 'analyst', 'owner', 'developer']
     tenant_id: str
+    is_clinic_owner: bool = False
 
 
 class AuthResponse(StrictModel):
@@ -26,11 +27,11 @@ class AuthResponse(StrictModel):
 
 
 class CaseCreate(StrictModel):
-    alias: str = Field(min_length=2, max_length=100)
-    age: int | None = Field(default=None, ge=18, le=120)
+    full_name: str = Field(min_length=1, max_length=200)
+    age: int | None = Field(default=None, strict=True, ge=0, le=120)
     sex: Literal['female', 'male', 'unknown'] = 'unknown'
+    patient_phone: str = Field(default='', max_length=50)
     summary: str = Field(default='', max_length=6000)
-    diagnosis: str = Field(default='', max_length=2000)
 
 
 class FactInput(StrictModel):
@@ -118,10 +119,23 @@ class ImportCreate(StrictModel):
     external_id: str = 'DEMO-001'
 
 
+class RiskInputs(StrictModel):
+    systolic_pressure: float | None = Field(default=None, gt=0, le=400, allow_inf_nan=False)
+    total_cholesterol: float | None = Field(default=None, gt=0, le=1000, allow_inf_nan=False)
+    hdl_cholesterol: float | None = Field(default=None, gt=0, le=500, allow_inf_nan=False)
+    lipid_unit: Literal['mg/dL', 'mmol/L'] = 'mg/dL'
+    smoker: bool | None = None
+    diabetes: bool | None = None
+    bp_treated: bool | None = None
+    baseline_cvd: bool | None = None
+    confirmed: bool = False
+
+
 class ForecastCreate(StrictModel):
     expected_version: int = Field(ge=1)
     outcome_id: str = 'cardiovascular_event'
     horizon_years: int = Field(ge=1, le=10)
+    inputs: RiskInputs | None = None
 
 
 class IncidentCreate(StrictModel):
@@ -146,8 +160,14 @@ class VersionBody(StrictModel):
     expected_version: int = Field(ge=1)
 
 
-class CaseUpdate(CaseCreate):
+class CaseUpdate(StrictModel):
     expected_version: int = Field(ge=1)
+    full_name: str = Field(default='', min_length=1, max_length=200)
+    age: int | None = Field(default=None, strict=True, ge=0, le=120)
+    sex: Literal['female', 'male', 'unknown'] = 'unknown'
+    patient_phone: str = Field(default='', max_length=50)
+    summary: str = Field(default='', max_length=6000)
+    diagnosis: str = Field(default='', max_length=2000)
 
 
 class ClinicalConclusion(StrictModel):

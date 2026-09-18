@@ -1,5 +1,4 @@
 import hashlib
-import io
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse, Response
@@ -9,9 +8,11 @@ from .config import settings
 from .db import Record, User, get_db, uid
 from sqlalchemy import select
 from . import ai
-from .documents import extract_fixture_facts, extract_in_process, safe_zip
+from .documents import extract_fixture_facts, extract_in_process
+from .dicom import parse_dicom, render_frame
 from .routes import source_public
 from .schemas import ImagingReview, VersionBody
+from .patient_workspace import Category, create_entry_record
 from .security import ApiError, access_case, access_record, audit, bump_case, cached_idempotent, create_record, current_user, idem_key, idempotent, require_role, serialize
 
 router = APIRouter(prefix='/api/v1')
@@ -35,8 +36,10 @@ async def read_limited(file, limit):
 
 
 @router.post('/cases/{case_id}/documents', status_code=201)
-async def upload_document(case_id: str, expected_version: int = Form(...), identity_confirmed: bool = Form(False), file: UploadFile = File(...), user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
-    require_role(user, 'doctor')
+async def upload_document(case_id: str, expected_version: int = Form(...), identity_confirmed: bool = Form(False), file: UploadFile = File(...), category: Category | None = Form(None), user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
+    require_role(user, 'doctor', 'radiologist')
+    if user.role == 'radiologist' and category not in {None, 'instrumental'}:
+        raise ApiError(403, 'ROLE_REQUIRED', 'Radiologists can upload instrumental reports.')
     case = access_case(db, user, case_id)
     if not identity_confirmed:
         raise ApiError(422, 'IDENTITY_CONFIRMATION_REQUIRED', 'Confirm that the document belongs to this case and is authorized for demo use.')
@@ -48,6 +51,10 @@ async def upload_document(case_id: str, expected_version: int = Form(...), ident
     except Exception:
         raise ApiError(422, 'DOCUMENT_PARSE_FAILED', 'Document could not be safely parsed.')
     text = '\n'.join(page['text'] for page in extracted['pages'])
+    if category and len(text.strip()) > 20000:
+        raise ApiError(422, 'CLINICAL_ENTRY_SOURCE_TOO_LONG', 'Upload without a category, then select a clinical excerpt of at most 20000 characters.')
+    if category and not text.strip():
+        raise ApiError(422, 'DOCUMENT_TEXT_REQUIRED', 'The document needs selectable text; scanned pages require transcription.')
     for line in text.splitlines():
         if line.startswith('case_alias=') and line.partition('=')[2].strip() != case.alias:
             raise ApiError(409, 'PATIENT_IDENTITY_MISMATCH', 'Source identifies a different case.')
@@ -59,11 +66,14 @@ async def upload_document(case_id: str, expected_version: int = Form(...), ident
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
         source = create_record(db, user, 'source', {'name': Path(file.filename or 'Document').name, 'type': suffix.lstrip('.'), 'text': text[:90000], **extracted, 'storage_path': relative, 'extraction_method': 'local_parser', 'identity_confirmed_by': user.id}, case)
+        if category:
+            entry = create_entry_record(db, user, case, category, text.strip(), source=source)
+            source.data = {**source.data, 'clinical_entry_id': entry.id, 'clinical_category': category}
         for draft in extract_fixture_facts(extracted['pages']):
             create_record(db, user, 'fact', {**draft, 'source_id': source.id}, case)
         audit(db, user, 'document.imported', source.id)
         return source_public(source)
-    return idempotent(db, user, f'document:{case_id}', key, {'sha256': extracted['sha256'], 'version': expected_version, 'name': file.filename}, run)
+    return idempotent(db, user, f'document:{case_id}', key, {'sha256': extracted['sha256'], 'version': expected_version, 'name': file.filename, 'category': category}, run)
 
 
 @router.get('/documents/{source_id}')
@@ -133,70 +143,17 @@ def extract_with_model(source_id: str, body: VersionBody, user: User = Depends(c
     return idempotent(db, user, f'document.extract:{source_id}', key, body.model_dump(), run)
 
 
-def parse_dicom(data):
-    import numpy as np
-    import pydicom
-    archive = safe_zip(data, limit=1500 * 1024 * 1024, max_files=1100)
-    groups = {}
-    for entry in archive.infolist():
-        if entry.is_dir():
-            continue
-        if entry.file_size > 32 * 1024 * 1024:
-            raise ApiError(413, 'DICOM_INSTANCE_LIMIT', 'A DICOM instance is too large.')
-        try:
-            raw = archive.read(entry)
-            ds = pydicom.dcmread(io.BytesIO(raw), stop_before_pixels=True)
-        except Exception:
-            raise ApiError(422, 'INVALID_DICOM', 'Every archive file must be a readable DICOM instance.')
-        if str(ds.get('Modality', '')) != 'CT':
-            raise ApiError(422, 'UNSUPPORTED_MODALITY', 'M0 viewer accepts CT only.')
-        if int(ds.get('NumberOfFrames', 1)) != 1:
-            raise ApiError(422, 'UNSUPPORTED_MULTIFRAME', 'Use a single-frame CT series.')
-        required = ['SeriesInstanceUID', 'StudyInstanceUID', 'SOPInstanceUID', 'ImagePositionPatient', 'ImageOrientationPatient', 'PixelSpacing', 'Rows', 'Columns']
-        if any(k not in ds for k in required):
-            raise ApiError(422, 'DICOM_GEOMETRY_MISSING', 'Series geometry is incomplete.')
-        if int(ds.Rows) > 4096 or int(ds.Columns) > 4096:
-            raise ApiError(413, 'DICOM_DIMENSION_LIMIT', 'Pixel dimensions exceed the safe budget.')
-        orientation = np.array(ds.ImageOrientationPatient, dtype=float)
-        position = np.array(ds.ImagePositionPatient, dtype=float)
-        spacing = np.array(ds.PixelSpacing, dtype=float)
-        if orientation.shape != (6,) or position.shape != (3,) or spacing.shape != (2,) or not np.isfinite(np.concatenate([orientation, position, spacing])).all() or np.any(spacing <= 0) or int(ds.Rows) < 1 or int(ds.Columns) < 1:
-            raise ApiError(422, 'INVALID_DICOM_GEOMETRY', 'Invalid spatial dimensions.')
-        if not np.isclose(np.linalg.norm(orientation[:3]), 1, atol=1e-3) or not np.isclose(np.linalg.norm(orientation[3:]), 1, atol=1e-3) or not np.isclose(np.dot(orientation[:3], orientation[3:]), 0, atol=1e-3):
-            raise ApiError(422, 'INVALID_DICOM_GEOMETRY', 'Orientation must be orthonormal.')
-        normal = np.cross(orientation[:3], orientation[3:])
-        series = str(ds.SeriesInstanceUID)
-        groups.setdefault(series, []).append({'raw': raw, 'sop': str(ds.SOPInstanceUID), 'study': str(ds.StudyInstanceUID), 'position': position.tolist(), 'orientation': orientation.tolist(), 'spacing': list(map(float, ds.PixelSpacing)), 'rows': int(ds.Rows), 'columns': int(ds.Columns), 'z': float(np.dot(normal, position))})
-    if not groups or sum(map(len, groups.values())) > 1000:
-        raise ApiError(422, 'DICOM_INSTANCE_COUNT', 'Expected 1–1000 CT instances.')
-    if len({item['study'] for items in groups.values() for item in items}) != 1:
-        raise ApiError(422, 'MULTIPLE_CT_STUDIES', 'Upload one study per archive.')
-    for instances in groups.values():
-        baseline = instances[0]
-        if len({item['sop'] for item in instances}) != len(instances):
-            raise ApiError(422, 'DUPLICATE_DICOM_INSTANCE', 'Duplicate SOP instances.')
-        for item in instances:
-            if item['study'] != baseline['study'] or item['rows'] != baseline['rows'] or item['columns'] != baseline['columns'] or not np.allclose(item['orientation'], baseline['orientation'], atol=1e-4) or not np.allclose(item['spacing'], baseline['spacing']):
-                raise ApiError(422, 'INCONSISTENT_DICOM_GEOMETRY', 'Inconsistent series geometry.')
-        instances.sort(key=lambda item: item['z'])
-        if len(instances) > 1:
-            gaps = np.diff([item['z'] for item in instances])
-            if np.any(gaps <= 0) or not np.allclose(gaps, np.median(gaps), rtol=.1, atol=.2):
-                raise ApiError(422, 'NON_UNIFORM_CT_SERIES', 'Non-uniform or duplicated slice positions.')
-    return groups
-
-
 @router.post('/cases/{case_id}/imaging-studies', status_code=201)
 async def imaging_upload(case_id: str, expected_version: int = Form(...), deidentified_confirmed: bool = Form(False), file: UploadFile = File(...), user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
     require_role(user, 'doctor', 'radiologist')
     case = access_case(db, user, case_id)
     if not deidentified_confirmed:
-        raise ApiError(422, 'DEIDENTIFICATION_REQUIRED', 'Confirm authorized de-identified or synthetic CT data, including burned-in text.')
+        raise ApiError(422, 'DEIDENTIFICATION_REQUIRED', 'Confirm authorized de-identified or synthetic radiology data, including burned-in text.')
     data = await read_limited(file, settings.max_dicom_bytes)
     groups = await run_in_threadpool(parse_dicom, data)
     def run():
         bump_case(db, case, expected_version)
-        study = create_record(db, user, 'study', {'name': 'CT · ' + case.alias, 'series': [], 'analysis_status': 'unavailable', 'reason': 'VALIDATED_CT_MODEL_NOT_CONFIGURED', 'mask_available': False, 'deidentified_confirmed_by': user.id}, case)
+        study = create_record(db, user, 'study', {'name': '/'.join(sorted({i['modality'] for items in groups.values() for i in items})) + ' · ' + case.alias, 'series': [], 'analysis_status': 'not_started', 'reason': 'SELECTED_FRAME_REVIEW_AVAILABLE', 'mask_available': False, 'synthetic_phantom': all(i['synthetic_phantom'] for series in groups.values() for i in series), 'deidentified_confirmed_by': user.id}, case)
         series_meta = []
         for series_uid, instances in groups.items():
             series_id = uid()
@@ -206,7 +163,7 @@ async def imaging_upload(case_id: str, expected_version: int = Form(...), deiden
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(item['raw'])
             first = instances[0]
-            series_meta.append({'id': series_id, 'uid': series_uid, 'count': len(instances), 'orientation': first['orientation'], 'spacing': first['spacing'], 'rows': first['rows'], 'columns': first['columns'], 'positions': [i['position'] for i in instances]})
+            series_meta.append({'id': series_id, 'uid': series_uid, 'count': sum(i['frames'] for i in instances), 'frame_map': [{'file_index': n, 'pixel_frame': f} for n, item in enumerate(instances) for f in range(item['frames'])], 'modality': first['modality'], 'color': first['color'], 'window_center': first['window_center'], 'window_width': first['window_width'], 'orientation': first['orientation'], 'spacing': first['spacing'], 'rows': first['rows'], 'columns': first['columns'], 'positions': [i['position'] for i in instances]})
         study.data = {**study.data, 'series': series_meta}
         audit(db, user, 'imaging.imported', study.id)
         return serialize(study)
@@ -219,28 +176,18 @@ def study(study_id: str, user: User = Depends(current_user), db: DBSession = Dep
 
 
 @router.get('/imaging-studies/{study_id}/series/{series_id}/frames/{index}')
-def frame(study_id: str, series_id: str, index: int, center: float = Query(40, ge=-2000, le=3000), width: float = Query(400, ge=1, le=8000), user: User = Depends(current_user), db: DBSession = Depends(get_db)):
-    import numpy as np
-    import pydicom
-    from PIL import Image
+def frame(study_id: str, series_id: str, index: int, center: float | None = Query(None, ge=-1000000, le=1000000), width: float | None = Query(None, ge=1, le=2000000), user: User = Depends(current_user), db: DBSession = Depends(get_db)):
     record = access_record(db, user, study_id, ['study'])
     series = next((s for s in record.data['series'] if s['id'] == series_id), None)
     if not series or not 0 <= index < series['count']:
         raise ApiError(404, 'FRAME_NOT_FOUND', 'Frame unavailable.')
-    path = protected_path(f'{user.tenant_id}/{record.id}/{series_id}/{index}.dcm')
     try:
-        ds = pydicom.dcmread(path)
-        pixels = ds.pixel_array.astype(float) * float(ds.get('RescaleSlope', 1)) + float(ds.get('RescaleIntercept', 0))
-        pixels = (np.clip((pixels - (center - width / 2)) / width, 0, 1) * 255).astype(np.uint8)
-        if ds.get('PhotometricInterpretation') == 'MONOCHROME1':
-            pixels = 255 - pixels
-        result = io.BytesIO()
-        Image.fromarray(pixels).save(result, format='PNG')
+        result = render_frame(record, series_id, index, center, width)
     except Exception:
         raise ApiError(422, 'DICOM_DECODE_FAILED', 'Pixel decoder unavailable or image corrupt.')
     audit(db, user, 'imaging.frame_viewed', study_id)
     db.commit()
-    return Response(result.getvalue(), media_type='image/png', headers={'Cache-Control': 'no-store'})
+    return Response(result, media_type='image/png', headers={'Cache-Control': 'no-store'})
 
 
 @router.post('/imaging-findings/{study_id}/reviews')

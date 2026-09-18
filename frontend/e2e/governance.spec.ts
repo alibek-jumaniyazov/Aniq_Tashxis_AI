@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
 async function login(page: Page, role: string) {
-  await page.goto('/')
+  await page.goto('/login')
+  await page.getByLabel('Электронная почта').fill('doctor@demo.aniq')
+  await page.getByLabel('Пароль', { exact: true }).fill('AniqDemo!2026')
   await page.getByLabel('Электронная почта').fill(`${role}@demo.aniq`)
   await page.getByRole('button', { name: 'Войти в пространство', exact: true }).click()
   await expect(page.locator('.sidebar')).toBeVisible()
@@ -11,10 +13,11 @@ test('expert confirmation, separate sender, anonymous PDF and analyst view', asy
   await login(page, 'doctor')
   const auth = await (await page.request.get('/api/v1/auth/me')).json()
   const headers = { 'X-CSRF-Token': auth.csrf_token, 'Idempotency-Key': crypto.randomUUID() }
-  const alias = 'E2E-REVIEW-' + Date.now()
-  const created = await page.request.post('/api/v1/cases', { headers, data: { alias, age: 40, summary: 'Synthetic export review test' } })
+  const fullName = 'Synthetic Review Patient ' + Date.now()
+  const created = await page.request.post('/api/v1/cases', { headers, data: { full_name: fullName, age: 40, summary: 'Synthetic export review test' } })
   expect(created.status()).toBe(201)
   const c = await created.json()
+  const alias = c.alias
   const incident = await page.request.post('/api/v1/incidents', { headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() }, data: { case_id: c.id, reason: 'Synthetic independent review' } })
   expect(incident.status()).toBe(201)
   await page.getByTitle('Выйти', { exact: true }).click()
@@ -37,7 +40,7 @@ test('expert confirmation, separate sender, anonymous PDF and analyst view', asy
   await modal.getByRole('button', { name: 'Подготовить отчёт', exact: true }).click()
   await expect(page.locator('.report-preview')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Подтвердить пакет' })).toHaveCount(0)
-  await page.getByRole('dialog', { name: 'Предпросмотр', exact: true }).getByRole('button', { name: 'Close', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Предпросмотр', exact: true }).getByRole('button', { name: 'Закрыть', exact: true }).click()
   await page.getByTitle('Выйти', { exact: true }).click()
   await login(page, 'sender')
   await page.getByRole('link', { name: 'Отчёты', exact: true }).click()
@@ -46,10 +49,10 @@ test('expert confirmation, separate sender, anonymous PDF and analyst view', asy
   await page.getByRole('button', { name: 'Отправить в тестовый приёмник', exact: true }).click()
   await expect(page.getByText(/Тестовая отправка · DEMO-/)).toBeVisible()
   const downloadEvent = page.waitForEvent('download')
-  await page.getByRole('link', { name: 'PDF', exact: true }).click()
+  await page.getByRole('button', { name: 'PDF', exact: true }).click()
   expect((await downloadEvent).suggestedFilename()).toMatch(/\.pdf$/)
   await page.screenshot({ path: 'test-results/report-approved.png', fullPage: true })
-  await page.getByRole('dialog', { name: 'Предпросмотр', exact: true }).getByRole('button', { name: 'Close', exact: true }).click()
+  await page.getByRole('dialog', { name: 'Предпросмотр', exact: true }).getByRole('button', { name: 'Закрыть', exact: true }).click()
   await page.getByTitle('Выйти', { exact: true }).click()
   await login(page, 'analyst')
   await expect(page.getByRole('heading', { name: 'Отчёты', exact: true, level: 1 })).toBeVisible()

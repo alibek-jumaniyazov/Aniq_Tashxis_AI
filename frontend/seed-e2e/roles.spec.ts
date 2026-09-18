@@ -6,7 +6,7 @@ const roles = [
   { role: 'expert', home: '/expert', title: 'Ekspert tahlili' },
   { role: 'quality', home: '/reports', title: 'Hisobotlar' },
   { role: 'sender', home: '/reports', title: 'Hisobotlar' },
-  { role: 'admin', home: '/settings', title: 'Tizim va audit' },
+  { role: 'admin', home: '/settings/system', title: 'Sozlamalar' },
   { role: 'analyst', home: '/reports', title: 'Hisobotlar' },
 ]
 
@@ -15,7 +15,8 @@ for (const { role, home, title } of roles) {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await page.addInitScript(() => localStorage.setItem('aniq-language', 'uz'))
-    await page.goto('/')
+    await page.goto('/login')
+    await page.getByLabel('Parol', { exact: true }).fill('AniqDemo!2026')
     await page.getByLabel('Elektron pochta').fill(`${role}@demo.aniq`)
     await page.getByRole('button', { name: 'Ish maydoniga kirish', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(home + '$'))
@@ -33,7 +34,7 @@ for (const { role, home, title } of roles) {
       expect(staff.items).toHaveLength(7)
       for (const member of staff.items) await expect(page.getByRole('cell', { name: member.email, exact: true })).toBeVisible()
       await page.goto('/expert')
-      await expect(page).toHaveURL(/\/settings$/)
+      await expect(page).toHaveURL(/\/settings\/system$/)
     } else if (role === 'analyst') {
       const reports = await (await page.request.get('/api/v1/exports')).json()
       expect(reports.items).toHaveLength(1)
@@ -49,7 +50,8 @@ for (const { role, home, title } of roles) {
       expect(cases.total).toBe(5)
       const reviewed = cases.items.find((c: { alias: string }) => c.alias.endsWith('-002'))
       await page.goto('/cases/' + reviewed.id)
-      await expect(page.getByRole('tab', { name: 'Radiologiya', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await expect(page.getByRole('tab', { name: 'Bemor ma’lumotlari', exact: true })).toHaveAttribute('aria-selected', 'true')
+      await page.getByRole('button', { name: 'DICOM oynasini ochish', exact: true }).click()
       await expect(page.locator('.dicom-image img')).toBeVisible()
       expect(await page.locator('.dicom-image img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256)
       await expect(page.getByText('Д-р Тимур Рахимов', { exact: true }).last()).toBeVisible()

@@ -4,6 +4,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ArrowUpRight, Files, ShieldCheck } from 'lucide-react'
 import { errorText } from './api/client'
+import i18n from 'i18next'
+import { displayTime } from './dates'
 
 export function useAction() {
   const [busy, setBusy] = useState(false)
@@ -36,4 +38,4 @@ export function StateTag({ status }: { status: string }) {
 export function SectionTitle({ title, subtitle, extra }: { title: string; subtitle?: string; extra?: React.ReactNode }) { return <div className="section-title"><div><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>{extra}</div> }
 export function DemoLabel() { const { t } = useTranslation(); return <Tag bordered={false} className="demo-tag"><ShieldCheck size={12}/>{t('demoShort')}</Tag> }
 export function SourceButton({ onClick }: { onClick: () => void }) { const { t } = useTranslation(); return <button className="source-link" onClick={onClick}>{t('openSource')}<ArrowUpRight size={14}/></button> }
-export function time(value?: string | null) { return value ? new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' }).format(new Date(/[Zz]|[+-]\d\d:\d\d$/.test(value) ? value : value + 'Z')) : '—' }
+export function time(value?: string | null) { return displayTime(value, i18n.language) }

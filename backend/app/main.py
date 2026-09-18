@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import text
 from .config import ROOT, settings
-from .db import Base, engine
+from .db import Base, SessionLocal, engine
 from .security import ApiError
-from . import clinical, files, governance, jobs, routes
+from . import account_settings, billing, clinical, files, governance, jobs, patient_workspace, radiology, routes, seo
 
 
 @asynccontextmanager
@@ -19,6 +19,8 @@ async def lifespan(app):
         Base.metadata.create_all(engine)
         from .seed import seed
         seed()
+    with SessionLocal() as db:
+        billing.bootstrap(db)
     jobs.recover()
     yield
 
@@ -31,11 +33,14 @@ login_attempts = defaultdict(deque)
 @app.middleware('http')
 async def headers(request: Request, call_next):
     request.state.request_id = str(uuid4())
-    if request.url.path == '/api/v1/auth/login' and request.method == 'POST':
-        bucket = login_attempts[request.client.host if request.client else 'unknown']
+    if request.url.path in {'/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/password'} and request.method == 'POST':
+        host = request.client.host if request.client else 'unknown'
+        registering = request.url.path.endswith('/register')
+        prefix = 'register:' if registering else 'password:' if request.url.path.endswith('/password') else ''
+        bucket = login_attempts[prefix + host]
         while bucket and bucket[0] < time.monotonic() - 60:
             bucket.popleft()
-        if len(bucket) >= 12:
+        if len(bucket) >= (6 if registering else 12):
             return JSONResponse({'error': {'code': 'RATE_LIMIT', 'message': 'Too many login attempts.', 'request_id': request.state.request_id, 'details': {}}}, status_code=429, headers={'Retry-After': '60'})
         bucket.append(time.monotonic())
     if request.method not in {'GET', 'HEAD', 'OPTIONS'}:
@@ -46,6 +51,7 @@ async def headers(request: Request, call_next):
     response.headers.update({'X-Request-ID': request.state.request_id, 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'same-origin', 'X-Frame-Options': 'SAMEORIGIN'})
     if request.url.path.startswith('/api'):
         response.headers['Cache-Control'] = 'no-store'
+    seo.apply_indexing_headers(request, response)
     return response
 
 
@@ -66,9 +72,14 @@ async def unexpected_error(request, error):
 
 
 app.include_router(routes.router)
+app.include_router(account_settings.router)
 app.include_router(files.router)
 app.include_router(governance.router)
 app.include_router(clinical.router)
+app.include_router(radiology.router)
+app.include_router(billing.router)
+app.include_router(patient_workspace.router)
+app.include_router(seo.router)
 
 
 @app.get('/api/v1/health/live')
@@ -85,7 +96,7 @@ def ready():
 
 
 @app.get('/{path:path}', include_in_schema=False)
-def frontend(path: str):
+def frontend(path: str, request: Request):
     if path.startswith('api/'):
         raise ApiError(404, 'NOT_FOUND', 'Endpoint not found.')
     root = (ROOT / 'frontend' / 'dist').resolve()
@@ -95,5 +106,5 @@ def frontend(path: str):
     if target.is_file():
         return FileResponse(target)
     if (root / 'index.html').is_file():
-        return FileResponse(root / 'index.html')
+        return seo.render_frontend(root / 'index.html', request)
     return JSONResponse({'app': 'AniqTashxis', 'frontend': 'Run npm run dev in frontend or build it.', 'docs': '/docs'})

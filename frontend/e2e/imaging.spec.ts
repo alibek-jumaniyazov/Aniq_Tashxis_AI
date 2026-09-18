@@ -1,19 +1,22 @@
 import { test, expect } from '@playwright/test'
 
 test('synthetic DICOM upload, original pixels, slice and window controls', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/login')
+  await page.getByLabel('Электронная почта').fill('doctor@demo.aniq')
+  await page.getByLabel('Пароль', { exact: true }).fill('AniqDemo!2026')
   await page.getByRole('button', { name: 'Войти в пространство', exact: true }).click()
   await expect(page.locator('.sidebar')).toBeVisible()
   const auth = await (await page.request.get('/api/v1/auth/me')).json()
   const response = await page.request.post('/api/v1/cases', {
     headers: { 'X-CSRF-Token': auth.csrf_token, 'Idempotency-Key': crypto.randomUUID() },
-    data: { alias: 'E2E-PHANTOM-' + Date.now(), age: 40, summary: 'Synthetic geometric phantom; no patient data or diagnostic finding.' },
+    data: { full_name: 'Synthetic Phantom Patient ' + Date.now(), age: 40, summary: 'Synthetic geometric phantom; no patient data or diagnostic finding.' },
   })
   expect(response.status()).toBe(201)
   const c = await response.json()
   await page.goto('/cases/' + c.id)
-  await page.getByRole('tab', { name: 'Радиология', exact: true }).click()
-  await page.getByRole('button', { name: 'Загрузить DICOM ZIP', exact: true }).click()
+  await page.getByRole('button', { name: 'Открыть DICOM', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/cases/${c.id}/imaging$`))
+  await page.getByRole('button', { name: 'Загрузить DICOM', exact: true }).first().click()
   const modal = page.getByRole('dialog')
   await modal.getByRole('checkbox').check()
   await modal.locator('input[type=file]').setInputFiles('../demo/synthetic-phantom.zip')

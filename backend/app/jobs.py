@@ -10,7 +10,7 @@ from .rules import RULE_VERSION, review_snapshot
 from .clinical import evidence_report, eligible_facts
 from .security import access_case, audit, create_record
 
-pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='aniq-job')
+pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='aniq-job')
 
 
 def process_job(job_id):
@@ -25,11 +25,21 @@ def process_job(job_id):
             if not user or not user.active:
                 raise PermissionError('USER_REVOKED')
             case = access_case(db, user, job.case_id)
+            if job.kind == 'imaging':
+                from .radiology import process_image_job
+                process_image_job(db, job, user, case)
+                return
+            if job.kind == 'clinical_comparison':
+                from .patient_workspace import process_comparison
+                process_comparison(db, job, user, case)
+                return
             snapshot = job.payload['snapshot']
             mode, cutoff = job.payload['mode'], job.payload.get('decision_time')
             coverage, candidates = review_snapshot(snapshot, mode, cutoff)
             result = {'coverage': coverage, 'alert_ids': [], 'ai': None, 'limitations': [], 'rule_catalog_version': RULE_VERSION, 'model_id': settings.model_id, 'model_revision': settings.model_revision, 'ai_backend': settings.ai_backend, 'quantization': settings.model_quantization, 'prompt_version': ai.PROMPT_VERSION}
             result['data_quality'] = evidence_report(snapshot['facts'], mode, cutoff)
+            from .decision import review_decision
+            result['decision_review'] = review_decision(snapshot, mode, cutoff)
             if job.payload.get('include_ai'):
                 job.stage = 'medgemma'
                 db.commit()
@@ -77,10 +87,10 @@ def process_job(job_id):
             db.commit()
         except Exception:
             db.rollback()
-            job = db.get(Job, job_id)
-            if job and job.status != 'cancelled':
-                job.status, job.stage, job.error_code, job.finished_at = 'failed', 'failed', 'JOB_FAILED', now()
-                db.commit()
+            # Failure publication races with cancellation too. Only a still-owned
+            # running job may transition; a terminal state must never be replaced.
+            db.execute(update(Job).where(Job.id == job_id, Job.status == 'running').values(status='failed', stage='failed', error_code='JOB_FAILED', finished_at=now()))
+            db.commit()
 
 
 def dispatch(job_id):
@@ -98,7 +108,7 @@ def recover():
         # Local queue cannot own another process's live jobs: one local server only.
         if settings.queue_mode == 'local':
             for job in db.scalars(select(Job).where(Job.status == 'running')):
-                job.status, job.error_code, job.finished_at = 'failed', 'WORKER_INTERRUPTED', now()
+                job.status, job.stage, job.error_code, job.finished_at = 'failed', 'failed', 'WORKER_INTERRUPTED', now()
             db.commit()
         queued = list(db.scalars(select(Job.id).where(Job.status == 'queued')))
     for job_id in queued:

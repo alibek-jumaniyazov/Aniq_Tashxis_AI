@@ -59,3 +59,63 @@ def test_local_provider_validates_token_budget_and_structured_request(monkeypatc
     monkeypatch.setattr(settings, 'max_input_tokens', 2)
     with pytest.raises(ModelUnavailable, match='MODEL_INPUT_TOO_LONG'):
         llama_adapter.generate(snapshot, {}, 'current', None, 'Data only')
+
+
+@pytest.mark.parametrize('payload', [
+    None, {}, {'choices': []}, {'choices': [None]},
+    {'choices': [{'finish_reason': 'stop', 'message': {'content': None}}]},
+    {'choices': [{'finish_reason': 'stop', 'message': {'content': '  '}}]},
+    {'choices': [{'finish_reason': 'tool_calls', 'message': {'content': '{}'}}]},
+    {'choices': [{'finish_reason': None, 'message': {'content': '{}'}}]},
+])
+def test_incomplete_or_malformed_completion_envelopes_are_rejected(payload):
+    with pytest.raises(ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
+        llama_adapter.completion_text(payload)
+
+
+def test_token_limit_stop_is_reported_as_incomplete():
+    with pytest.raises(ModelUnavailable, match='MODEL_OUTPUT_INCOMPLETE'):
+        llama_adapter.completion_text({'choices': [{'finish_reason': 'length', 'message': {'content': '{'}}]})
+
+
+def test_explicit_structured_output_budget_reserves_context_without_truncating_sources(monkeypatch):
+    real_client = httpx.Client
+    requests = []
+    context_limit = 4096
+
+    def handle(request):
+        requests.append(request.url.path)
+        if request.url.path == '/apply-template':
+            return httpx.Response(200, json={'prompt': 'Full original evidence'})
+        if request.url.path == '/tokenize':
+            return httpx.Response(200, json={'tokens': list(range(1440))})
+        if request.url.path == '/props':
+            return httpx.Response(200, json={'default_generation_settings': {'n_ctx': context_limit}})
+        payload = json.loads(request.content)
+        assert payload['max_tokens'] == 1200
+        return httpx.Response(200, json={'choices': [{'finish_reason': 'stop', 'message': {'content': '{}'}}]})
+
+    monkeypatch.setattr(settings, 'max_new_tokens', 768)
+    monkeypatch.setattr(llama_adapter.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handle), **kw))
+    assert llama_adapter.complete([], {}, max_tokens=1200) == '{}'
+    requests.clear()
+    context_limit = 2048
+    with pytest.raises(ModelUnavailable, match='MODEL_INPUT_TOO_LONG'):
+        llama_adapter.complete([], {}, max_tokens=1200)
+    assert '/v1/chat/completions' not in requests
+
+
+@pytest.mark.parametrize('broken_stage', ['/apply-template', '/tokenize', '/v1/chat/completions'])
+def test_malformed_local_server_response_has_actionable_error(monkeypatch, broken_stage):
+    real_client = httpx.Client
+
+    def handle(request):
+        if request.url.path == broken_stage:
+            return httpx.Response(200, json={})
+        if request.url.path == '/apply-template':
+            return httpx.Response(200, json={'prompt': 'valid prompt'})
+        return httpx.Response(200, json={'tokens': [1, 2, 3]})
+
+    monkeypatch.setattr(llama_adapter.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handle), **kw))
+    with pytest.raises(ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
+        llama_adapter.complete([], {})

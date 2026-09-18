@@ -42,7 +42,9 @@ def evidence_report(facts, mode='current', cutoff=None):
 @router.get('/cases/{case_id}/readiness')
 def readiness(case_id: str, user: User = Depends(current_user), db: DBSession = Depends(get_db)):
     case = access_case(db, user, case_id)
-    return {'case_version': case.version, **evidence_report(current_facts(db, case_id))}
+    report = evidence_report(current_facts(db, case_id))
+    population_eligible = case.age is not None and 18 <= case.age <= 120
+    return {'case_version': case.version, **report, 'clinical_population_eligible': population_eligible, 'clinical_review_ready': report['clinical_review_ready'] and population_eligible}
 
 
 @router.patch('/cases/{case_id}')
@@ -53,12 +55,12 @@ def edit_case(case_id: str, body: CaseUpdate, user: User = Depends(current_user)
     def run():
         before = case_json(case)
         bump_case(db, case, body.expected_version)
-        for field, value in body.model_dump(exclude={'expected_version'}).items():
+        for field, value in body.model_dump(exclude={'expected_version'}, exclude_unset=True).items():
             setattr(case, field, value)
         create_record(db, user, 'case_revision', {'before': before, 'after': case_json(case)}, case)
         audit(db, user, 'case.updated', case.id)
         return case_json(case)
-    return idempotent(db, user, f'case.update:{case_id}', key, body.model_dump(), run)
+    return idempotent(db, user, f'case.update:{case_id}', key, body.model_dump(exclude_unset=True), run)
 
 
 @router.post('/cases/{case_id}/clinical-conclusions', status_code=201)

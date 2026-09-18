@@ -19,7 +19,7 @@ def seed_realistic(anchor=None):
     if not settings.demo_mode:
         raise RuntimeError('Synthetic seed requires DEMO_MODE=true')
     anchor = (anchor or now()).replace(microsecond=0)
-    from .routes import case_json, password_hasher
+    from .routes import case_snapshot, password_hasher
     from .seed import DEMO_PASSWORD
     from .files import parse_dicom
     with SessionLocal() as db:
@@ -70,7 +70,7 @@ def seed_realistic(anchor=None):
             return record('fact', {'key': key, 'label': label, 'value': value, 'unit': unit, 'source_id': source.id, 'span': f'page:{page["page"]}:chars:{offset}-{offset + len(quote)}', 'provenance': 'document', 'assertion': 'present' if value is not None else 'not_documented', 'confirmed': confirmed, 'event_time': at.isoformat(), 'available_time': at.isoformat(), 'order_status': 'active' if key == 'medication.substance' else 'not_applicable', **extra}, case, at + timedelta(minutes=2), action='fact.confirmed' if confirmed else 'fact.drafted')
 
         def analysis(case, at, mode='current', cutoff=None):
-            snapshot = {**case_json(case), 'facts': current_facts(db, case.id), 'notes': [serialize(r) for r in db.scalars(select(Record).where(Record.case_id == case.id, Record.kind == 'note'))]}
+            snapshot = {**case_snapshot(case), 'facts': current_facts(db, case.id), 'notes': [serialize(r) for r in db.scalars(select(Record).where(Record.case_id == case.id, Record.kind == 'note'))]}
             coverage, candidates = review_snapshot(snapshot, mode, cutoff)
             job = Job(tenant_id=TENANT, case_id=case.id, actor_id=users['doctor'].id, case_version=case.version, status='partial', stage='complete', payload={'snapshot': snapshot, 'mode': mode, 'decision_time': cutoff, 'include_ai': False}, created_at=at, started_at=at + timedelta(seconds=1), finished_at=at + timedelta(seconds=2), result={})
             db.add(job)

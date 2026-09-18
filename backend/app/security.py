@@ -6,6 +6,7 @@ from fastapi import Depends, Header, Request
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
+from .config import settings
 from .db import Audit, Case, CaseAccess, Idempotency, Record, Session, User, get_db, now
 
 
@@ -14,19 +15,28 @@ class ApiError(Exception):
         self.status, self.code, self.message, self.details = status, code, message, details or {}
 
 
+def account_enabled(user):
+    if not user or not user.active:
+        return False
+    demo_identity = user.email.lower().endswith('@demo.aniq') or user.tenant_id in {'avilab-demo', 'other-demo'}
+    return settings.demo_mode or not demo_identity
+
+
 def current_user(request: Request, db: DBSession = Depends(get_db)):
     token = request.cookies.get('aniq_session', '')
     session = db.get(Session, hashlib.sha256(token.encode()).hexdigest()) if token else None
     if session is None or session.expires_at.replace(tzinfo=timezone.utc) < now():
         raise ApiError(401, 'SESSION_EXPIRED', 'Please sign in again.')
     user = db.get(User, session.user_id)
-    if not user or not user.active:
+    if not account_enabled(user):
         raise ApiError(401, 'SESSION_EXPIRED', 'Please sign in again.')
     if request.method not in {'GET', 'HEAD', 'OPTIONS'}:
         if not secrets.compare_digest(request.headers.get('X-CSRF-Token', ''), session.csrf):
             raise ApiError(403, 'CSRF_REJECTED', 'Invalid session request.')
     request.state.user = user
     request.state.session = session
+    from .billing_service import require_entitlement
+    require_entitlement(db, user, request.url.path)
     return user
 
 
@@ -36,8 +46,10 @@ def require_role(user, *roles):
 
 
 def access_case(db, user, case_id):
+    from .billing_service import require_entitlement
+    require_entitlement(db, user, '/api/v1/cases/' + case_id)
     case = db.get(Case, case_id)
-    if not case or case.tenant_id != user.tenant_id or user.role in {'admin', 'analyst'}:
+    if not case or case.tenant_id != user.tenant_id or user.role in {'admin', 'analyst', 'owner', 'developer'}:
         raise ApiError(404, 'CASE_NOT_FOUND', 'Case is not available.')
     if case.owner_id != user.id:
         grant = db.scalar(select(CaseAccess).where(CaseAccess.case_id == case.id, CaseAccess.user_id == user.id))

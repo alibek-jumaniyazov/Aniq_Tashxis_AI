@@ -15,7 +15,7 @@ def mutate(client, path, body=None, method='post', key=None, **kwargs):
 
 
 def new_case(client):
-    result = mutate(client, '/cases', {'alias': 'TEST-' + str(uuid4())[:8], 'age': 54, 'sex': 'male'})
+    result = mutate(client, '/cases', {'full_name': 'Test Patient ' + str(uuid4())[:8], 'age': 54, 'sex': 'male'})
     assert result.status_code == 201, result.text
     return result.json()
 
@@ -73,7 +73,7 @@ def test_unknown_time_and_cancelled_order_not_inferred(client):
 
 def test_idempotency_and_payload_conflict(client):
     key = str(uuid4())
-    body = {'alias': 'IDEMPOTENT', 'age': 50}
+    body = {'full_name': 'Idempotent Patient', 'age': 50}
     first = mutate(client, '/cases', body, key=key)
     again = mutate(client, '/cases', body, key=key)
     assert first.json()['id'] == again.json()['id']
@@ -103,7 +103,7 @@ def test_tenant_and_admin_isolation(client, case):
 
 def test_csrf_is_enforced(client):
     client.headers.pop('X-CSRF-Token')
-    result = mutate(client, '/cases', {'alias': 'FORGED'})
+    result = mutate(client, '/cases', {'full_name': 'Forged Patient'})
     assert result.status_code == 403 and result.json()['error']['code'] == 'CSRF_REJECTED'
 
 
@@ -111,7 +111,8 @@ def test_forecast_null_is_not_zero(client, case):
     result = mutate(client, f'/cases/{case["id"]}/forecasts', {'expected_version': case['version'], 'horizon_years': 10})
     assert result.status_code == 200
     assert result.json()['probability'] is None
-    assert 'UNSUPPORTED_HORIZON' in result.json()['unsupported_reasons']
+    assert 'hdl_cholesterol' in result.json()['missing_fields']
+    assert result.json()['eligibility_status'] == 'not_available'
 
 
 def test_dmed_revoke_identity_and_no_password(client):

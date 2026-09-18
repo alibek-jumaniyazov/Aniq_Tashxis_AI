@@ -2,6 +2,7 @@ from alembic import context
 from sqlalchemy import create_engine
 from app.config import settings
 from app.db import Base
+from app import billing_models  # noqa: F401 - register commerce metadata
 
 config = context.config
 target_metadata = Base.metadata
