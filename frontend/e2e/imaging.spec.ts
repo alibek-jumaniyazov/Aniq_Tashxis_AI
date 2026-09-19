@@ -1,0 +1,43 @@
+import { test, expect } from '@playwright/test'
+
+test('synthetic DICOM upload, original pixels, slice and window controls', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('Электронная почта').fill('doctor@demo.aniq')
+  await page.getByLabel('Пароль', { exact: true }).fill('AniqDemo!2026')
+  await page.getByRole('button', { name: 'Войти в пространство', exact: true }).click()
+  await expect(page.locator('.sidebar')).toBeVisible()
+  const auth = await (await page.request.get('/api/v1/auth/me')).json()
+  const response = await page.request.post('/api/v1/cases', {
+    headers: { 'X-CSRF-Token': auth.csrf_token, 'Idempotency-Key': crypto.randomUUID() },
+    data: {
+      full_name: 'Synthetic Phantom Patient ' + Date.now(),
+      age: 40,
+      summary: 'Synthetic geometric phantom; no patient data or diagnostic finding.',
+    },
+  })
+  expect(response.status()).toBe(201)
+  const c = await response.json()
+  await page.goto('/cases/' + c.id)
+  await page.getByRole('button', { name: 'Открыть DICOM', exact: true }).click()
+  await expect(page).toHaveURL(new RegExp(`/cases/${c.id}/imaging$`))
+  await page.getByRole('button', { name: 'Загрузить DICOM', exact: true }).first().click()
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('checkbox').check()
+  await modal.locator('input[type=file]').setInputFiles('../demo/synthetic-phantom.zip')
+  await expect(modal).toHaveCount(0)
+  const pixel = page.locator('.dicom-image img')
+  await expect(pixel).toBeVisible()
+  await expect.poll(() => pixel.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256)
+  await expect(page.locator('.dicom-corner.bottom')).toContainText('1 / 12')
+  await expect(page.locator('.dicom-corner.bottom')).toContainText('Маска отсутствует')
+  await page.getByRole('slider').first().focus()
+  await page.keyboard.press('ArrowRight')
+  await expect(pixel).toHaveAttribute('src', /frames\/1\?/)
+  await page.locator('.dicom-toolbar .ant-select-selector').last().click()
+  await page.getByTitle('Лёгочное', { exact: true }).click()
+  await expect(pixel).toHaveAttribute('src', /center=-600&width=1500/)
+  await expect
+    .poll(() => pixel.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth === 256))
+    .toBe(true)
+  await page.screenshot({ path: 'test-results/synthetic-dicom.png', fullPage: true })
+})

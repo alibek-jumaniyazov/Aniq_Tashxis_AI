@@ -1,0 +1,67 @@
+/* Accommodate longer translated labels without shrinking readable text. */
+.cp-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+.cp-header-actions .lp-text-link {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.cp-root .cp-header {
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-block: 16px;
+}
+.cp-root .cp-panel .ant-btn,
+.commerce-admin .commerce-review-actions .ant-btn {
+  height: auto;
+  min-height: 40px;
+  white-space: normal;
+  line-height: 1.5;
+  padding-block: 9px;
+}
+.cp-steps > span {
+  white-space: normal;
+  min-width: 0;
+  line-height: 1.5;
+}
+.cp-steps i {
+  flex-shrink: 0;
+}
+.commerce-admin .commerce-heading > div {
+  min-width: 0;
+}
+.commerce-admin .commerce-heading h1 {
+  overflow-wrap: anywhere;
+}
+.commerce-admin .commerce-plan-footer {
+  flex-wrap: wrap;
+}
+.commerce-admin .commerce-metric > strong {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .cp-header-actions {
+    gap: 8px;
+    margin-left: auto;
+  }
+  .cp-root .cp-header {
+    column-gap: 8px;
+  }
+  .cp-root .cp-steps {
+    gap: 6px;
+    font-size: 9px;
+  }
+  .cp-root .cp-steps > div {
+    min-width: 8px;
+  }
+  .commerce-admin .commerce-heading {
+    flex-wrap: wrap;
+  }
+  .commerce-review-actions .ant-btn {
+    width: 100%;
+  }
+}

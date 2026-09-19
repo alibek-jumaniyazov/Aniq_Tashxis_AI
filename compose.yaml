@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aniq
+      POSTGRES_USER: aniq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a local PostgreSQL password}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U aniq]
+      interval: 5s
+      retries: 12
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      retries: 12
+  migrate:
+    image: aniq-app:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: &backend_env
+      DATABASE_URL: postgresql+psycopg://aniq:${POSTGRES_PASSWORD}@db/aniq
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_MODE: celery
+      DEMO_MODE: 'true'
+      STORAGE_ROOT: /app/runtime/files
+      MODEL_PATH: /app/models/medgemma-1.5-4b-it
+    command: [sh, -c, 'alembic upgrade head && python -m app.seed']
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    image: aniq-app:local
+    environment: *backend_env
+    ports: ['127.0.0.1:8000:8000']
+    volumes: [files:/app/runtime/files, ./models:/app/models:ro]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  worker:
+    image: aniq-app:local
+    environment: *backend_env
+    command: [celery, -A, app.worker.celery_app, worker, --pool=solo, --concurrency=1, --loglevel=WARNING]
+    volumes: [files:/app/runtime/files, ./models:/app/models:ro]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+volumes:
+  postgres_data:
+  redis_data:
+  files:

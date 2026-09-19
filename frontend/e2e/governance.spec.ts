@@ -1,0 +1,81 @@
+import { test, expect, type Page } from '@playwright/test'
+
+async function login(page: Page, role: string) {
+  await page.goto('/login')
+  await page.getByLabel('Электронная почта').fill('doctor@demo.aniq')
+  await page.getByLabel('Пароль', { exact: true }).fill('AniqDemo!2026')
+  await page.getByLabel('Электронная почта').fill(`${role}@demo.aniq`)
+  await page.getByRole('button', { name: 'Войти в пространство', exact: true }).click()
+  await expect(page.locator('.sidebar')).toBeVisible()
+}
+
+test('expert confirmation, separate sender, anonymous PDF and analyst view', async ({ page }) => {
+  await login(page, 'doctor')
+  const auth = await (await page.request.get('/api/v1/auth/me')).json()
+  const headers = { 'X-CSRF-Token': auth.csrf_token, 'Idempotency-Key': crypto.randomUUID() }
+  const fullName = 'Synthetic Review Patient ' + Date.now()
+  const created = await page.request.post('/api/v1/cases', {
+    headers,
+    data: { full_name: fullName, age: 40, summary: 'Synthetic export review test' },
+  })
+  expect(created.status()).toBe(201)
+  const c = await created.json()
+  const alias = c.alias
+  const incident = await page.request.post('/api/v1/incidents', {
+    headers: { ...headers, 'Idempotency-Key': crypto.randomUUID() },
+    data: { case_id: c.id, reason: 'Synthetic independent review' },
+  })
+  expect(incident.status()).toBe(201)
+  await page.getByTitle('Выйти', { exact: true }).click()
+  await login(page, 'expert')
+  await page.getByRole('link', { name: 'Экспертный разбор', exact: true }).click()
+  const row = page.getByRole('row').filter({ hasText: alias })
+  await row.getByRole('button', { name: 'Открыть', exact: true }).click()
+  await page.getByLabel('Статус', { exact: true }).click()
+  await page.getByText('Подтверждено', { exact: true }).last().click()
+  await page
+    .getByLabel('Вывод и обоснование')
+    .fill('Independent synthetic evidence checked by the expert.')
+  await page.getByRole('button', { name: 'Сохранить заключение', exact: true }).click()
+  await expect(row).toContainText('Подтверждено')
+  await page.getByRole('link', { name: 'Отчёты', exact: true }).click()
+  await page.getByRole('button', { name: 'Подготовить отчёт', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('Экспертный разбор', { exact: true }).click()
+  await page.getByText(`${alias} · v2`, { exact: true }).click()
+  await modal.getByLabel('Цель', { exact: true }).fill('Private purpose ' + alias)
+  await modal.getByLabel('Основание', { exact: true }).fill('Synthetic hackathon demonstration')
+  await modal.getByRole('button', { name: 'Подготовить отчёт', exact: true }).click()
+  await expect(page.locator('.report-preview')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Подтвердить пакет' })).toHaveCount(0)
+  await page
+    .getByRole('dialog', { name: 'Предпросмотр', exact: true })
+    .getByRole('button', { name: 'Закрыть', exact: true })
+    .click()
+  await page.getByTitle('Выйти', { exact: true }).click()
+  await login(page, 'sender')
+  await page.getByRole('link', { name: 'Отчёты', exact: true }).click()
+  await page
+    .getByRole('row')
+    .filter({ hasText: alias })
+    .getByRole('button', { name: 'Предпросмотр' })
+    .click()
+  await page.getByRole('button', { name: 'Подтвердить пакет', exact: true }).click()
+  await page.getByRole('button', { name: 'Отправить в тестовый приёмник', exact: true }).click()
+  await expect(page.getByText(/Тестовая отправка · DEMO-/)).toBeVisible()
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'PDF', exact: true }).click()
+  expect((await downloadEvent).suggestedFilename()).toMatch(/\.pdf$/)
+  await page.screenshot({ path: 'test-results/report-approved.png', fullPage: true })
+  await page
+    .getByRole('dialog', { name: 'Предпросмотр', exact: true })
+    .getByRole('button', { name: 'Закрыть', exact: true })
+    .click()
+  await page.getByTitle('Выйти', { exact: true }).click()
+  await login(page, 'analyst')
+  await expect(page.getByRole('heading', { name: 'Отчёты', exact: true, level: 1 })).toBeVisible()
+  await expect(page.getByText('Private purpose ' + alias)).toHaveCount(0)
+  const exports = await (await page.request.get('/api/v1/exports')).json()
+  expect(JSON.stringify(exports)).not.toContain(alias)
+  expect(JSON.stringify(exports)).not.toContain(c.id)
+})

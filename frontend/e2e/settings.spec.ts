@@ -1,0 +1,163 @@
+import { expect, test, type Page } from '@playwright/test'
+
+async function login(page: Page, role = 'doctor') {
+  const response = await page.request.post('/api/v1/auth/login', {
+    data: { email: `${role}@demo.aniq`, password: 'AniqDemo!2026' },
+  })
+  expect(response.status()).toBe(200)
+}
+
+test('one Settings destination, persistent interface preferences and one quick comparison action', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await login(page)
+  await page.goto('/cases')
+  const navigation = page.locator('.sidebar nav')
+  await expect(navigation.getByRole('link', { name: 'Настройки', exact: true })).toHaveCount(1)
+  await expect(
+    navigation.getByRole('link', { name: 'Клиника и подписка', exact: true }),
+  ).toHaveCount(0)
+  await expect(navigation.getByRole('link', { name: 'Система и аудит', exact: true })).toHaveCount(
+    0,
+  )
+  const cases = await (await page.request.get('/api/v1/cases')).json()
+  await page.goto('/cases/' + cases.items[0].id)
+  await expect(
+    page.locator('.case-heading').getByRole('button', { name: 'Заключение врача', exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page.locator('.case-heading').getByRole('button', { name: 'Сравнить с AI', exact: true }),
+  ).toHaveCount(1)
+  await expect(page.getByTestId('quick-compare')).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Заключение врача', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Сравнение с AI', exact: true })).toBeVisible()
+  await page.goto('/account')
+  await expect(page).toHaveURL(/\/settings\/clinic$/)
+  await expect(
+    page.getByRole('heading', { name: 'Настройки', level: 1, exact: true }),
+  ).toBeVisible()
+  await page.reload()
+  await expect(page).toHaveURL(/\/settings\/clinic$/)
+  await page.goto('/settings/interface')
+  await page.getByRole('switch', { name: 'Уменьшить анимации', exact: true }).check()
+  await expect(page.locator('html')).toHaveAttribute('data-reduce-motion', 'true')
+  await page.reload()
+  await expect(page.getByRole('switch', { name: 'Уменьшить анимации', exact: true })).toBeChecked()
+  await page
+    .getByRole('radiogroup', { name: 'Язык интерфейса', exact: true })
+    .getByRole('radio', { name: 'English', exact: true })
+    .check()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('switch', { name: 'Reduce animations', exact: true })).toBeChecked()
+  await page.locator('.topbar').getByRole('combobox').press('Enter')
+  await page
+    .locator('.ant-select-item-option-content')
+    .getByText('O‘zbekcha', { exact: true })
+    .click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'uz')
+  await page.getByRole('radio', { name: 'English', exact: true }).check()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
+    .toBe(true)
+  await page.screenshot({ path: 'test-results/settings-interface-mobile.png', fullPage: true })
+  expect(errors).toEqual([])
+})
+
+test('inactive clinic owner can edit profile, revoke another session and change own password', async ({
+  page,
+  browser,
+}) => {
+  const email = `settings-${crypto.randomUUID()}@example.test`
+  const password = 'SettingsOnly!2026'
+  const nextPassword = 'SettingsUpdated!2026'
+  const registration = await page.request.post('/api/v1/auth/register', {
+    data: {
+      clinic_name: 'Synthetic Settings Clinic',
+      name: 'Synthetic Settings Owner',
+      email,
+      password,
+      phone: '+998901234567',
+      plan_id: 'clinic10',
+    },
+  })
+  expect(registration.status(), await registration.text()).toBe(201)
+  const other = await browser.newContext({ baseURL: 'http://127.0.0.1:5174' })
+  try {
+    expect(
+      (await other.request.post('/api/v1/auth/login', { data: { email, password } })).status(),
+    ).toBe(200)
+    await page.goto('/settings/profile')
+    const name = 'Updated Synthetic Owner'
+    await page.getByLabel('ФИО', { exact: true }).fill(name)
+    await page.getByRole('button', { name: 'Сохранить профиль', exact: true }).click()
+    await expect(page.locator('.sidebar .user-profile')).toContainText(name)
+    await page.reload()
+    await expect(page.getByLabel('ФИО', { exact: true })).toHaveValue(name)
+    await page.goto('/cases')
+    await expect(page).toHaveURL(/\/settings\/clinic$/)
+    await page.goto('/settings/security')
+    await page.getByRole('button', { name: 'Завершить остальные сеансы', exact: true }).click()
+    await expect(page.getByText('Остальные сеансы завершены.', { exact: true })).toBeVisible()
+    expect((await other.request.get('/api/v1/auth/me')).status()).toBe(401)
+    expect(
+      (await other.request.post('/api/v1/auth/login', { data: { email, password } })).status(),
+    ).toBe(200)
+    await page.getByLabel('Текущий пароль', { exact: true }).fill('IncorrectPassword!2026')
+    await page.getByLabel('Новый пароль', { exact: true }).fill(nextPassword)
+    await page.getByLabel('Повторите новый пароль', { exact: true }).fill(nextPassword)
+    await page.getByRole('button', { name: 'Изменить пароль', exact: true }).click()
+    await expect(page.getByText('Текущий пароль указан неверно.', { exact: true })).toBeVisible()
+    await page.getByLabel('Текущий пароль', { exact: true }).fill(password)
+    await page.getByRole('button', { name: 'Изменить пароль', exact: true }).click()
+    await expect(
+      page.getByText('Пароль изменён. Остальные сеансы завершены.', { exact: true }),
+    ).toBeVisible()
+    expect((await page.request.get('/api/v1/auth/me')).status()).toBe(200)
+    expect((await other.request.get('/api/v1/auth/me')).status()).toBe(401)
+    expect(
+      (await other.request.post('/api/v1/auth/login', { data: { email, password } })).status(),
+    ).toBe(401)
+    expect(
+      (
+        await other.request.post('/api/v1/auth/login', { data: { email, password: nextPassword } })
+      ).status(),
+    ).toBe(200)
+  } finally {
+    await other.close()
+  }
+})
+
+test('administrator retains system and audit, developer has personal settings without clinic permissions', async ({
+  page,
+  browser,
+}) => {
+  await login(page, 'admin')
+  await page.goto('/settings/system')
+  await expect(
+    page.getByRole('heading', { name: 'Настройки', level: 1, exact: true }),
+  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Система и аудит', exact: true })).toBeVisible()
+  await expect(page.locator('.model-card')).toBeVisible()
+  const developer = await browser.newContext({ baseURL: 'http://127.0.0.1:5174' })
+  try {
+    const p = await developer.newPage()
+    await login(p, 'developer')
+    await p.goto('/settings/profile')
+    await expect(p.getByLabel('ФИО', { exact: true })).toBeVisible()
+    await expect(p.locator('main').getByRole('link', { name: /Клиника и подписка/ })).toHaveCount(0)
+    await p.goto('/settings/system')
+    await expect(p).toHaveURL(/\/settings\/profile$/)
+    await expect(
+      p.locator('.sidebar nav').getByRole('link', { name: 'Настройки', exact: true }),
+    ).toBeVisible()
+  } finally {
+    await developer.close()
+  }
+})

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <title>AniqTashxis.ai — Clinical intelligence, in focus</title>
+  <rect width="1200" height="630" fill="#F4F7EF"/>
+  <path d="M812 0V630M872 0V630M932 0V630M992 0V630M1052 0V630M1112 0V630M1172 0V630M760 75H1200M760 135H1200M760 195H1200M760 255H1200M760 315H1200M760 375H1200M760 435H1200M760 495H1200M760 555H1200" stroke="#DCE7D9"/>
+  <circle cx="956" cy="305" r="219" fill="#E6EFE4"/>
+  <circle cx="956" cy="305" r="178" stroke="#B7CEC1"/>
+  <circle cx="956" cy="305" r="151" stroke="#B7CEC1" stroke-dasharray="2 12"/>
+  <g transform="translate(800 149) scale(4.875)">
+    <rect width="64" height="64" rx="20" fill="#087F83"/>
+    <path d="M9.5 32C15.5 22.6 23.1 18 32 18C40.9 18 48.5 22.6 54.5 32C48.5 41.4 40.9 46 32 46C23.1 46 15.5 41.4 9.5 32Z" stroke="#F5FFFC" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M37.3 23.8A9.8 9.8 0 1 0 41.8 32" stroke="#F5FFFC" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="32" cy="32" r="3.6" fill="#B9EECF"/>
+    <path d="M36.5 27.5L43 21" stroke="#B9EECF" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="45.7" cy="18.3" r="2.2" fill="#B9EECF"/>
+  </g>
+  <g font-family="Manrope,Arial,sans-serif">
+    <text x="72" y="110" fill="#15343D" font-size="36" font-weight="800">AniqTashxis<tspan fill="#087F83">.ai</tspan></text>
+    <text x="72" y="239" fill="#607C73" font-size="15" font-weight="700" letter-spacing="4">CLINICAL INTELLIGENCE, IN FOCUS</text>
+    <text x="68" y="323" fill="#15343D" font-size="61" font-weight="800" letter-spacing="-2">Dalilni ko‘ring.</text>
+    <text x="68" y="398" fill="#087F83" font-size="61" font-weight="800" letter-spacing="-2">Qarorni tekshiring.</text>
+    <text x="72" y="459" fill="#607C73" font-size="20">Shifokorlar va klinikalar uchun AI yordamchi</text>
+    <text x="72" y="558" fill="#15343D" font-size="16" font-weight="600">Klinik tahlil</text><circle cx="210" cy="552" r="3" fill="#087F83"/>
+    <text x="233" y="558" fill="#15343D" font-size="16" font-weight="600">DICOM</text><circle cx="323" cy="552" r="3" fill="#087F83"/>
+    <text x="346" y="558" fill="#15343D" font-size="16" font-weight="600">AI yordamchi</text>
+  </g>
+  <path d="M72 508H692" stroke="#CCDCCE"/>
+</svg>
