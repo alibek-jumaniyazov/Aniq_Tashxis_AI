@@ -38,7 +38,8 @@ def test_cancelled_job_is_never_started_and_terminal_state_is_preserved(client, 
 def test_retry_obeys_same_queue_budget_as_new_analysis(client, monkeypatch):
     c = new_case(client)
     first = run(client, c, include_ai=False)
-    assert first['result']['model_revision']
+    assert first['result']['provenance'] == 'documentation_rules'
+    assert 'model_revision' not in first['result']
     monkeypatch.setattr(jobs, 'dispatch', lambda _: None)
     for _ in range(10):
         queued_case = new_case(client)

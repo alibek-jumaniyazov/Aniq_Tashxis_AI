@@ -54,14 +54,14 @@ export default function AiAnalysisPanel({ run, kind = 'decision', openSource, on
 
   return <section className={`ai-analysis-panel ai-analysis-panel--${kind}`} data-testid="ai-analysis-panel" aria-label={t('aiResultTitle')} aria-busy={pending}>
     <header className="ai-analysis-header">
-      <div className="ai-analysis-brand"><span className="ai-analysis-symbol"><Sparkles size={23}/></span><div><span className="ai-analysis-eyebrow">{analysisOriginKey(run) === 'aiLocalResult' ? `MEDGEMMA · 4B · ${t('aiLocalModel')}` : t(analysisOriginKey(run))}</span><h2>{t(kind === 'clinical' ? 'aiClinicalResult' : kind === 'radiology' ? 'aiRadiologyResult' : 'aiDecisionResult')}</h2></div></div>
+      <div className="ai-analysis-brand"><span className="ai-analysis-symbol"><Sparkles size={23}/></span><div><span className="ai-analysis-eyebrow">{t(analysisOriginKey(run))}</span><h2>{t(kind === 'clinical' ? 'aiClinicalResult' : kind === 'radiology' ? 'aiRadiologyResult' : 'aiDecisionResult')}</h2></div></div>
       {run ? <StateTag status={run.status}/> : <Tag>{t('not_started')}</Tag>}
     </header>
     <div className="ai-analysis-body">
       {run && <div className="ai-analysis-meta"><span>{t('evaluatedVersion')} <b>v{run.case_version}</b></span><span>{time(run.created_at)}</span><span>{t(run.mode)}</span></div>}
       <AnalysisProvenance run={run} mismatch={localeMismatch}/>
       {run?.is_stale && <Alert type="warning" showIcon message={t('stale')} description={t('aiResultStaleHint')}/>}
-      {pending ? <div className="ai-result-progress" role="status" aria-live="polite"><LoaderCircle size={30} className="spin"/><div><h3>{t(run?.status === 'queued' ? 'aiResultQueued' : 'aiResultRunning')}</h3><p>{t(run?.stage === 'medgemma' ? 'aiResultModelWorking' : 'aiResultPreparing')}</p><small>{t('aiResultProgressHint')}</small></div></div> : localeMismatch ? null : mayShowContent ? <>
+      {pending ? <div className="ai-result-progress" role="status" aria-live="polite"><LoaderCircle size={30} className="spin"/><div><h3>{t(run?.status === 'queued' ? 'aiResultQueued' : 'aiResultRunning')}</h3><p>{t(['ai_inference', 'medgemma'].includes(run?.stage || '') ? 'aiResultModelWorking' : 'aiResultPreparing')}</p><small>{t('aiResultProgressHint')}</small></div></div> : localeMismatch ? null : mayShowContent ? <>
         {ai?.summary?.trim() && <section className="ai-result-summary"><div className="ai-result-section-label"><BookOpenCheck size={17}/>{t('aiResultSummary')}</div><ResultText text={ai.summary}/></section>}
         {!!observations.length && <section className="ai-result-observations"><h3><FileText size={17}/>{t('aiImageObservations')}</h3><ol>{observations.map((observation, i) => <li key={i}>{observation}</li>)}</ol></section>}
         {assessment?.status === 'insufficient_data' && <Alert type="warning" showIcon message={t('insufficientDiagnosticData')} description={t('aiNoGuessing')}/>}

@@ -21,6 +21,8 @@ const imageProse = {
   uz: 'O‘quv kadri: fantomning geometrik shakllari ko‘rinadi.',
   en: 'Training frame: geometric phantom shapes are visible.',
 }
+test.afterEach(async ({ page }) => { await page.unrouteAll({ behavior: 'wait' }) })
+
 const sourceText = 'Исходная учебная запись врача: синтетический пациент, медицинских назначений нет.'
 
 async function switchLanguage(page: Page, language: Language) {
@@ -86,11 +88,8 @@ async function fixture(page: Page, imaging = false) {
     await route.fulfill({ status: 202, json: { run_id: run.id, status: 'queued', case_version: patient.version } })
   }
   await page.route(`**/api/v1/cases/${patient.id}`, route => route.request().method() === 'GET' ? route.fulfill({ json: patient }) : route.continue())
-  await page.route('**/api/v1/system/status', async route => {
-    const response = await route.fetch()
-    const status = await response.json()
-    await route.fulfill({ json: { ...status, model: { ...status.model, ready: true, vision_ready: true, backend: 'llama_cpp', reason: null } } })
-  })
+  const systemStatus = await (await page.request.get('/api/v1/system/status')).json()
+  await page.route('**/api/v1/system/status', route => route.fulfill({ json: { ...systemStatus, model: { ...systemStatus.model, ready: true, vision_ready: true, provider: 'openai', backend: 'openai', model_id: 'mock-project-model', data_processing: 'openai_cloud', configured: true, reason: null } } }))
   await page.route(`**/api/v1/cases/${patient.id}/readiness`, route => route.fulfill({ json: { clinical_review_ready: true, clinical_population_eligible: true, confirmed_facts: 1, total_facts: 1, eligible_facts: 1, unconfirmed_facts: 0, potential_conflicts: [], evidence: [], missing_units: [], unknown_times: [], excluded_by_time: 0 } }))
   await page.route(`**/api/v1/cases/${patient.id}/clinical-comparisons`, route => route.request().method() === 'GET' ? route.fulfill({ json: { items: comparisons } }) : queue(route, 'clinical_comparison'))
   await page.route(`**/api/v1/cases/${patient.id}/analyses`, route => queue(route, route.request().postDataJSON().review_focus === 'clinical_assessment' ? 'clinical_assessment' : 'documentation'))
@@ -134,6 +133,8 @@ test('comparison switches same-version saved languages, preserves sources and se
   const result = page.getByTestId('clinical-comparison-result')
   for (const language of locales) {
     await switchLanguage(page, language)
+    await expect(page.locator('.pw-comparison-launch').getByTestId('ai-processing-notice')).toContainText('OpenAI API')
+    await expect(page.locator('.local-pill')).toContainText('OpenAI')
     await expect(result.locator('.pw-ai-summary')).toHaveText(new RegExp(summaries[language]))
     for (const other of locales.filter(value => value !== language)) await expect(result).not.toContainText(summaries[other])
     await expectSynthetic(result, language)
@@ -180,6 +181,7 @@ test('diagnostic and documentation tools select localized prose and send current
     for (const focus of ['clinical_assessment', 'documentation'] as const) {
       await drawer.getByRole('tab', { name: focus === 'clinical_assessment' ? labels[language].clinical : labels[language].decision, exact: true }).click()
       const panel = drawer.locator('.ant-tabs-tabpane-active').getByTestId('ai-analysis-panel')
+      await expect(drawer.locator('.ant-tabs-tabpane-active').getByTestId('ai-processing-notice')).toContainText('OpenAI API')
       await expect(panel.locator('.ai-result-summary')).toContainText(summaries[language])
       await expectSynthetic(panel, language)
       await expectHistoryLanguages(page, drawer.locator('.ant-tabs-tabpane-active').getByRole('combobox').last(), [language])
@@ -206,6 +208,7 @@ test('DICOM viewer launches/retries in all languages, selects localized frame pr
   await expect.poll(() => page.locator('.dicom-image img').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true)
   for (const language of locales) {
     await switchLanguage(page, language)
+    await expect(page.getByTestId('ai-processing-notice')).toContainText('OpenAI API')
     await expect(result.locator('.ai-result-observations')).toContainText(imageProse[language])
     await expect(page.locator('.rw-frame-results')).toContainText(imageProse[language])
     await expectSynthetic(result, language)

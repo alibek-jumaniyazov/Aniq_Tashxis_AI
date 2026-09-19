@@ -21,7 +21,7 @@
     <text x="72" y="459" fill="#607C73" font-size="20">Shifokorlar va klinikalar uchun AI yordamchi</text>
     <text x="72" y="558" fill="#15343D" font-size="16" font-weight="600">Klinik tahlil</text><circle cx="210" cy="552" r="3" fill="#087F83"/>
     <text x="233" y="558" fill="#15343D" font-size="16" font-weight="600">DICOM</text><circle cx="323" cy="552" r="3" fill="#087F83"/>
-    <text x="346" y="558" fill="#15343D" font-size="16" font-weight="600">MedGemma 4B</text>
+    <text x="346" y="558" fill="#15343D" font-size="16" font-weight="600">AI yordamchi</text>
   </g>
   <path d="M72 508H692" stroke="#CCDCCE"/>
 </svg>

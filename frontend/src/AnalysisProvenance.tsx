@@ -7,7 +7,7 @@ export default function AnalysisProvenance({ run, mismatch = false }: { run?: An
   if (!run) return null
   const language = analysisLanguage(run).toUpperCase()
   return <div className="analysis-provenance">
-    <div><Tag>{t('aiOutputLanguage')}: {language}</Tag><Tag color={syntheticAnalysis(run) ? 'gold' : 'cyan'}>{t(analysisOriginKey(run))}</Tag></div>
+    <div><Tag>{t('aiOutputLanguage')}: {language}</Tag><Tag color={syntheticAnalysis(run) ? 'gold' : 'cyan'}>{t(analysisOriginKey(run))}</Tag>{['aiOpenAIResult', 'aiLocalResult'].includes(analysisOriginKey(run)) && run.result.model_id && <Tag>{run.result.model_id}</Tag>}</div>
     {syntheticAnalysis(run) && <Alert showIcon type="info" message={t('aiSyntheticResultHint')}/>}
     {mismatch && <Alert showIcon type="warning" message={t('aiLanguageMismatch')} description={t('aiLanguageMismatchHint', { language })}/>}
   </div>

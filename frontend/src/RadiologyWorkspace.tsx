@@ -10,6 +10,7 @@ import { api, get, post } from './api/client'
 import type { Case, Status, User } from './types'
 import { Blank, SectionTitle, StateTag, time, useAction } from './ui'
 import WorkflowGuide from './WorkflowGuide'
+import AiProcessingNotice from './AiProcessingNotice'
 import AiAnalysisPanel from './AiAnalysisPanel'
 import RadiologyReportEditor, { type ImagingReport, type ReportDraft } from './RadiologyReportEditor'
 import RadiologyCoverage from './RadiologyCoverage'
@@ -133,7 +134,7 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
       </div>{study && <RadiologyReportEditor key={study.id} c={c} studyId={study.id} canEdit={canUpload} report={report} onChange={updateReport} reports={reportQuery.data?.items || []} loading={reportQuery.isPending} error={reportQuery.error} retry={() => void reportQuery.refetch()}/>}</div>
       {study && series && <div className="margin-top">
         <SectionTitle title={t('imageAIReview')} subtitle={t('rwAnalysisScopeHelp')} extra={<StateTag status={status.data?.model.vision_ready ? 'succeeded' : 'unavailable'}/>}/>
-        <div className="rw-scope-controls"><label htmlFor="radiology-analysis-scope">{t('rwAnalysisScope')}</label><Select id="radiology-analysis-scope" value={analysisScope} disabled={!!active} onChange={setAnalysisScope} options={['study_sample', 'selected_frame'].map(value => ({ value, label: t(value) }))}/><p>{t(analysisScope === 'study_sample' ? 'rwSamplePlan' : 'selectedFrameNotice', { count: Math.min(4, study.series.reduce((total, item) => total + item.count, 0)) })}</p></div>
+        <AiProcessingNotice model={status.data?.model}/><div className="rw-scope-controls"><label htmlFor="radiology-analysis-scope">{t('rwAnalysisScope')}</label><Select id="radiology-analysis-scope" value={analysisScope} disabled={!!active} onChange={setAnalysisScope} options={['study_sample', 'selected_frame'].map(value => ({ value, label: t(value) }))}/><p>{t(analysisScope === 'study_sample' ? 'rwSamplePlan' : 'selectedFrameNotice', { count: Math.min(4, study.series.reduce((total, item) => total + item.count, 0)) })}</p></div>
         <Space wrap>
           {canUpload && <Button type="primary" icon={<Sparkles size={16}/>} loading={busy} disabled={!!active || !status.data?.model.vision_ready || loadedUrl !== imageUrl || reportQuery.isPending || !!reportQuery.error || reportTooLong} onClick={launchAnalysis}>{t(analysisScope === 'study_sample' ? (report.radiologist_report.trim() ? 'rwCompareSample' : 'rwAnalyseSample') : (report.radiologist_report.trim() ? 'rwCompare' : 'analyseSelectedFrame'))}</Button>}
           {active?.review_focus === 'radiology' && canUpload && <Button loading={busy} onClick={() => void act(() => post(`/analyses/${active.id}/cancel`))}>{t('cancel')}</Button>}
@@ -141,7 +142,7 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
         {reportTooLong && <Alert className="margin-top" type="warning" showIcon message={t('rwReportLimit', { count: reportLimit })}/>}
         {active && <Alert className="workflow-state" type="info" showIcon message={t('wpAnalysisRunning')}/>}
         {!active && loadedUrl !== imageUrl && <p className="workflow-help">{t('wpImageReadyHint')}</p>}
-        {!status.data?.model.vision_ready && <Alert className="margin-top" type="info" showIcon message={status.isPending ? t('loading') : t('VISION_MODEL_NOT_READY')} action={<Button loading={status.isFetching} onClick={() => void status.refetch()}>{t('wpRetryService')}</Button>}/>}
+        {!status.data?.model.vision_ready && <Alert className="margin-top" type="info" showIcon message={status.isPending ? t('loading') : t(status.data?.model.reason || 'VISION_MODEL_NOT_READY')} action={<Button loading={status.isFetching} onClick={() => void status.refetch()}>{t('wpRetryService')}</Button>}/>}
         {!!runs.length && <>
           <Select className="full-width margin-top" aria-label={t('imageReviewHistory')} value={run?.id} onChange={setSelectedRun} options={localizedHistoryRuns(runs, language).map(r => ({ value: r.id, label: `${analysisLanguage(r).toUpperCase()} · ${time(r.created_at)} · ${t(r.status)}` }))}/>
           {run && <>
@@ -149,7 +150,7 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
             <RadiologyCoverage run={run} onOpenFrame={openFrame} showNarrative={!localeMismatch}/>
             {evaluatedReport && <details className="rw-evaluated-report"><summary>{t('rwEvaluatedReport')}</summary><p>{evaluatedReport}</p></details>}
             {comparison && !localeMismatch && !['queued', 'running', 'failed', 'cancelled'].includes(run.status) && <section className={`rw-comparison rw-comparison--${comparison.status}`} aria-label={t('rwComparisonTitle')}>{run.is_stale && <Alert type="warning" showIcon message={t('stale')} description={t('aiResultStaleHint')}/>}<div className="rw-comparison-heading"><Sparkles size={20}/><div><span>{t('rwComparisonTitle')}</span><h3>{t(`rwStatus_${comparison.status}`)}</h3></div></div>{!!comparison.frame_refs?.length && <p className="rw-comparison-refs">{t('rwComparisonFrames')}: {comparison.frame_refs.join(', ')}</p>}<p>{comparison.explanation}</p><h4>{t('rwVerify')}</h4><ul>{comparison.points_to_verify.map((point, index) => <li key={index}>{point}</li>)}</ul><small>{t('rwComparisonLimit')}</small></section>}
-            <AiAnalysisPanel run={run} kind="radiology" busy={busy} onRetry={canUpload && (localeMismatch || ['partial', 'failed', 'cancelled'].includes(run.status)) ? retryAnalysis : undefined} retryDisabledReason={run.is_stale ? t('stale') : active ? t('wpAnalysisRunning') : !status.data?.model.vision_ready ? t('VISION_MODEL_NOT_READY') : undefined}/>
+            <AiAnalysisPanel run={run} kind="radiology" busy={busy} onRetry={canUpload && (localeMismatch || ['partial', 'failed', 'cancelled'].includes(run.status)) ? retryAnalysis : undefined} retryDisabledReason={run.is_stale ? t('stale') : active ? t('wpAnalysisRunning') : !status.data?.model.vision_ready ? t(status.data?.model.reason || 'VISION_MODEL_NOT_READY') : undefined}/>
           </>}
         </>}
       </div>}

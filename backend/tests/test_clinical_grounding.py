@@ -388,3 +388,72 @@ def test_needs_review_accepts_specific_finding_and_conclusion_comparison():
     output['diagnosis_review'].update(status='needs_review', summary='Врач пишет, что пульс не измеряли, хотя в осмотре записан пульс 72 /min.')
     output['discrepancies'] = [{'text': 'Отрицание измерения пульса противоречит записанному значению 72 /min.', 'refs': ['E1', 'E2']}]
     assert patient_workspace_ai.validate_comparison(output, data, patient_workspace_ai.evidence_context(data)) is output
+
+
+@pytest.mark.parametrize('text,refs', [
+    ('E5da dori rejasi hujjatlashtirilmagan.', ['E1', 'E2', 'E3', 'E4']),
+    ('E1-E4 record observations.', ['E1', 'E3', 'E4', 'E5']),
+    ('E1–E4 dagi ma’lumotlar.', ['E1', 'E3', 'E4', 'E5']),
+    ('E1—4 describe observations.', ['E1', 'E3', 'E4', 'E5']),
+    ('The observation is in F2.', ['F1']),
+])
+def test_inline_source_citations_must_be_in_the_same_blocks_refs(text, refs):
+    with pytest.raises(ValueError, match='Inline evidence'):
+        patient_workspace_ai.validate_inline_references(text, refs)
+
+
+@pytest.mark.parametrize('text,refs', [
+    ('E5da dori rejasi hujjatlashtirilmagan.', ['E5']),
+    ('E1-E4 record observations.', ['E1', 'E2', 'E3', 'E4']),
+    ('See F1–F3.', ['F1', 'F2', 'F3']),
+    ('ICD-10: E11; other source is E2.', ['E2']),
+    ('МКБ-10 E11 и код E11.9 записаны в источнике.', []),
+])
+def test_complete_inline_source_ranges_and_explicit_diagnostic_codes_are_allowed(text, refs):
+    patient_workspace_ai.validate_inline_references(text, refs)
+
+
+def test_actual_uzbek_missing_conclusion_citation_is_rejected_even_for_insufficient_data():
+    output = comparison()
+    output['treatment_review'].update(summary='E2da dori rejasi hujjatlashtirilmagan.', refs=['E1'])
+    with pytest.raises(ValueError, match='Inline evidence reference is missing'):
+        validate(output)
+
+
+def test_oversized_and_reversed_inline_ranges_are_bounded_and_rejected():
+    for text in ('E1-E9999999999', 'E5-E1', 'E1-F2'):
+        with pytest.raises(ValueError, match='Inline evidence range'):
+            patient_workspace_ai.validate_inline_references(text, ['E1', 'E2'])
+
+
+@pytest.mark.parametrize('remote,limit', [(False, 4), (True, 8)])
+def test_generation_reference_limit_respects_provider_capacity_and_public_schema(monkeypatch, remote, limit):
+    from app import ai_provider
+    monkeypatch.setattr(ai_provider, 'is_openai', lambda: remote)
+    data = snapshot()
+    schema = patient_workspace_ai.output_schema(data, patient_workspace_ai.evidence_context(data))
+    assert schema['$defs']['ReviewSection']['properties']['refs']['maxItems'] == limit
+    assert schema['$defs']['CitedObservation']['properties']['refs']['maxItems'] == limit
+    assert schema['$defs']['OutlookScenario']['properties']['refs']['maxItems'] == limit
+
+
+def test_openai_review_can_cite_all_five_sources_instead_of_omitting_conclusion(monkeypatch):
+    from app import ai_provider
+    monkeypatch.setattr(ai_provider, 'is_openai', lambda: True)
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    data = snapshot()
+    data['entries'].append({'id': 'lab', 'category': 'laboratory', 'text': 'A documented laboratory observation.'})
+    output = comparison()
+    output['treatment_review'].update(
+        summary='В E1-E3 и F1-F2 не описана текущая схема лечения.',
+        refs=['E1', 'E2', 'E3', 'F1', 'F2'],
+    )
+
+    def complete(messages, schema, **kwargs):
+        if 'treatment_review' in schema['properties']:
+            assert len(output['treatment_review']['refs']) <= schema['$defs']['ReviewSection']['properties']['refs']['maxItems']
+        return json.dumps({key: value for key, value in output.items() if key in schema['properties']})
+
+    monkeypatch.setattr(ai_provider, 'complete', complete)
+    result = patient_workspace_ai.review(data)
+    assert result['treatment_review']['refs'] == ['E1', 'E2', 'E3', 'F1', 'F2']

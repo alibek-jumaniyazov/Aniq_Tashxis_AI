@@ -135,5 +135,13 @@ test('paired TB examples show different grounded conclusions without inventing i
     await expect(page.locator('.source-paper pre')).toContainText('MTB detected MEDIUM')
     await expect(page.locator('.source-paper pre')).toContainText('rifampicin resistance NOT detected')
   }
+  const challenging = list.find(item => item.alias.endsWith('-015'))!
+  await page.goto(`/cases/${challenging.id}`)
+  await switchLanguage(page, 'uz')
+  await page.getByRole('tab', { name: copy.uz.comparison, exact: true }).click()
+  const uzReview = page.locator('[data-testid="clinical-comparison-result"]:visible')
+  await expect(uzReview.locator('.pw-ai-eyebrow')).toHaveText(copy.uz.synthetic)
+  await expect(uzReview.locator('.pw-findings--discrepancies')).toBeVisible()
+  await page.screenshot({ path: 'seed-test-results/seed-uz-comparison-015.png', fullPage: true })
   verifyReadOnly()
 })

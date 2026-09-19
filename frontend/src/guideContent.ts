@@ -47,18 +47,18 @@ export const guideContent = {
 }),
   decision: entry({
     title: 'Qarorni tekshirish qanday ishlaydi?', intro: 'Bu bo‘lim hujjat va faktlarning mosligini tekshiradi. Diagnostik taxminlar uchun “Diagnostik yordam” bo‘limidan foydalaning.',
-    steps: ['Joriy ma’lumotlar yoki qaror qabul qilingan paytdagi ko‘rinishni tanlang.', 'MedGemma kerak bo‘lsa AI tugmasini yoqing va tekshiruvni boshlang.', 'Tekshiruv qamrovi, dalillar va ogohlantirishlarni ochib, javobingizni saqlang.'],
-    faq: [['Qaror vaqtini qachon kiritaman?', 'Oldingi qarorni baholaganda uning haqiqiy vaqtini kiriting. Keyin ma’lum bo‘lgan ma’lumotlar o‘sha qarorga dalil sifatida qo‘shilmaydi.'], ['“Qisman” natija nimani bildiradi?', 'Ayrim tekshiruvlar bajarildi, boshqalariga ma’lumot yoki model yetishmadi. Qamrov va cheklovlarni o‘qing; bu “hammasi to‘g‘ri” degani emas.'], ['AI javobi chiqmasa nima qilaman?', 'Natijadagi sababni o‘qing: lokal model ulanishi, dalil yetishmasligi yoki ishlov berish xatosi bo‘lishi mumkin. Sababni bartaraf etib qayta urinib ko‘ring.']],
+    steps: ['Joriy ma’lumotlar yoki qaror qabul qilingan paytdagi ko‘rinishni tanlang.', 'AI kerak bo‘lsa AI tugmasini yoqing va tekshiruvni boshlang.', 'Tekshiruv qamrovi, dalillar va ogohlantirishlarni ochib, javobingizni saqlang.'],
+    faq: [['Qaror vaqtini qachon kiritaman?', 'Oldingi qarorni baholaganda uning haqiqiy vaqtini kiriting. Keyin ma’lum bo‘lgan ma’lumotlar o‘sha qarorga dalil sifatida qo‘shilmaydi.'], ['“Qisman” natija nimani bildiradi?', 'Ayrim tekshiruvlar bajarildi, boshqalariga ma’lumot yoki model yetishmadi. Qamrov va cheklovlarni o‘qing; bu “hammasi to‘g‘ri” degani emas.'], ['AI javobi chiqmasa nima qilaman?', 'Natijadagi sababni o‘qing: AI xizmatiga ulanish, dalil yetishmasligi yoki ishlov berish xatosi bo‘lishi mumkin. Sababni bartaraf etib qayta urinib ko‘ring.']],
   }, {
     title: 'Как работает проверка решения?', intro: 'Раздел проверяет согласованность документов и фактов. Диагностические гипотезы доступны в разделе «Диагностический разбор».',
-    steps: ['Выберите текущие данные или данные на момент исходного решения.', 'Включите MedGemma при необходимости и запустите проверку.', 'Откройте покрытие, доказательства и предупреждения; сохраните ответ врача.'],
-    faq: [['Когда указывать время решения?', 'При оценке прошлого решения укажите его фактическое время. Более поздние данные не станут доказательствами для того момента.'], ['Что означает частичный результат?', 'Часть проверок выполнена; другим не хватило данных или модели. Изучите покрытие и ограничения: это не подтверждение корректности всего лечения.'], ['Почему нет ответа AI?', 'Прочитайте указанную причину: недоступность локальной модели, нехватка данных или ошибка обработки. Устраните причину и повторите запрос.']],
+    steps: ['Выберите текущие данные или данные на момент исходного решения.', 'Включите AI при необходимости и запустите проверку.', 'Откройте покрытие, доказательства и предупреждения; сохраните ответ врача.'],
+    faq: [['Когда указывать время решения?', 'При оценке прошлого решения укажите его фактическое время. Более поздние данные не станут доказательствами для того момента.'], ['Что означает частичный результат?', 'Часть проверок выполнена; другим не хватило данных или модели. Изучите покрытие и ограничения: это не подтверждение корректности всего лечения.'], ['Почему нет ответа AI?', 'Прочитайте указанную причину: недоступность AI-сервиса, нехватка данных или ошибка обработки. Устраните причину и повторите запрос.']],
   }, {
     "title": "How does decision review work?",
     "intro": "This section checks the consistency of documents and facts. Use diagnostic review for diagnostic hypotheses.",
     "steps": [
         "Choose current data or the data available at the time of the original decision.",
-        "Enable MedGemma if needed and start the review.",
+        "Enable AI if needed and start the review.",
         "Read the coverage, evidence and warnings, then save the doctor’s response."
     ],
     "faq": [
@@ -72,21 +72,21 @@ export const guideContent = {
         ],
         [
             "Why is there no AI response?",
-            "Read the stated reason: the local model may be unavailable, evidence may be insufficient, or processing may have failed. Resolve the cause and try again."
+            "Read the stated reason: the configured AI service may be unavailable, evidence may be insufficient, or processing may have failed. Resolve the cause and try again."
         ]
     ]
 }),
   clinical: entry({
-    title: 'AI tahlilini qanday o‘qiyman?', intro: 'MedGemma shifokor tekshirishi uchun taxmin beradi. AI xulosasi bilan shifokor saqlagan klinik xulosa alohida ko‘rsatiladi.',
+    title: 'AI tahlilini qanday o‘qiyman?', intro: 'AI shifokor tekshirishi uchun taxmin beradi. AI xulosasi bilan shifokor saqlagan klinik xulosa alohida ko‘rsatiladi.',
     steps: ['Shikoyat va qo‘shimcha kuzatuvlarni manbadan tasdiqlang.', 'Diagnostik tahlilni boshlang, natijadagi dalil havolalarini tekshiring.', 'Taxmin, zid dalil va aniqlashtirish savollarini baholab, shifokor xulosasini yozing.'],
-    faq: [['Savollarning javobini qayerga yozaman?', 'Aniqlangan javobni yangi klinik fakt sifatida, manbasi va vaqti bilan kiriting va tasdiqlang. Keyin yangi tahlilni boshlang. Ma’lum bo‘lmagan javoblarni to‘qimang.'], ['“Eskirgan” natija nimani bildiradi?', 'Tahlildan keyin holat o‘zgargan. Eski javob tarix uchun saqlanadi; joriy ma’lumotlarga yangi tahlil kerak.'], ['AI taxmini tasdiqlangan tashxismi?', 'Yo‘q. MedGemma chiqishi tekshirish uchun taklifdir. Yakuniy klinik xulosani dalillarni tekshirgan shifokor alohida saqlaydi.']],
+    faq: [['Savollarning javobini qayerga yozaman?', 'Aniqlangan javobni yangi klinik fakt sifatida, manbasi va vaqti bilan kiriting va tasdiqlang. Keyin yangi tahlilni boshlang. Ma’lum bo‘lmagan javoblarni to‘qimang.'], ['“Eskirgan” natija nimani bildiradi?', 'Tahlildan keyin holat o‘zgargan. Eski javob tarix uchun saqlanadi; joriy ma’lumotlarga yangi tahlil kerak.'], ['AI taxmini tasdiqlangan tashxismi?', 'Yo‘q. AI chiqishi tekshirish uchun taklifdir. Yakuniy klinik xulosani dalillarni tekshirgan shifokor alohida saqlaydi.']],
   }, {
-    title: 'Как читать результат AI?', intro: 'MedGemma предлагает гипотезы для проверки врачом. Ответ AI и сохранённое клиническое заключение врача отображаются отдельно.',
+    title: 'Как читать результат AI?', intro: 'AI предлагает гипотезы для проверки врачом. Ответ AI и сохранённое клиническое заключение врача отображаются отдельно.',
     steps: ['Подтвердите жалобы и дополнительные наблюдения по источникам.', 'Запустите диагностический разбор и проверьте ссылки на доказательства.', 'Оцените гипотезы, противоречия и вопросы, затем запишите заключение врача.'],
     faq: [['Где ответить на уточняющие вопросы?', 'Добавьте выясненный ответ как клинический факт с источником и временем, подтвердите его и запустите новый разбор. Неизвестные ответы не придумывайте.'], ['Что значит устаревший результат?', 'После анализа случай изменился. Старый ответ сохранён для истории; текущим данным нужен новый разбор.'], ['Гипотеза AI — это диагноз?', 'Нет. Это предложение для проверки. Итоговое заключение отдельно сохраняет врач после проверки доказательств.']],
   }, {
     "title": "How do I read an AI analysis?",
-    "intro": "MedGemma proposes hypotheses for a doctor to review. The AI output and the doctor’s saved clinical conclusion are displayed separately.",
+    "intro": "AI proposes hypotheses for a doctor to review. The AI output and the doctor’s saved clinical conclusion are displayed separately.",
     "steps": [
         "Confirm complaints and additional observations against their sources.",
         "Start diagnostic review and check the evidence links in the result.",
@@ -108,16 +108,16 @@ export const guideContent = {
     ]
 }),
   radiology: entry({
-    title: 'Tasvir bilan qanday ishlayman?', intro: 'DICOM ko‘rish, o‘lchash, lokal AI fikri va radiolog xulosasi bitta ish maydonida.',
+    title: 'Tasvir bilan qanday ishlayman?', intro: 'DICOM ko‘rish, o‘lchash, AI kuzatuvlari va radiolog xulosasi bitta ish maydonida.',
     steps: ['Shaxssizlantirilgan DICOM yoki ZIP faylini yuklang va seriyani tanlang.', 'Kesim, oyna, masshtab va o‘lchovni sozlang. AI tanlangan kesimni tahlil qiladi.', 'AI kuzatuvlarini asl tasvir bilan solishtiring, keyin radiolog xulosasini yozing.'],
     faq: [['AI butun tekshiruvni baholaydimi?', 'Hozir tanlangan kesim va uning ko‘rinishi yuboriladi. Bitta tasvir javobini butun tekshiruv xulosasi deb qabul qilmang.'], ['O‘lchov nega millimetrda chiqmayapti?', 'DICOM ichida mos piksel oralig‘i bo‘lishi kerak. Geometriya yetarli bo‘lmasa ishonchli mm o‘lchovi chiqarilmaydi.'], ['AI yoki ko‘rish tugmasi nega yopiq?', 'Avval seriya va kesim to‘liq yuklanishi kerak. AI uchun ishlayotgan ko‘rish modeli va ruxsat etilgan rol ham talab qilinadi; sabab panelda ko‘rsatiladi.']],
   }, {
-    title: 'Как работать с изображением?', intro: 'Просмотр DICOM, измерения, локальный AI и заключение рентгенолога — в одном пространстве.',
+    title: 'Как работать с изображением?', intro: 'Просмотр DICOM, измерения, анализ AI и заключение рентгенолога — в одном пространстве.',
     steps: ['Загрузите обезличенный DICOM или ZIP и выберите серию.', 'Настройте срез, окно, масштаб и измерение. AI анализирует выбранный срез.', 'Сопоставьте наблюдения AI с оригиналом и запишите заключение рентгенолога.'],
     faq: [['AI оценивает всё исследование?', 'Сейчас отправляется выбранный срез с его настройками отображения. Ответ по одному изображению не является заключением по всему исследованию.'], ['Почему нет измерения в миллиметрах?', 'В DICOM нужен корректный шаг пикселя. Без подходящей геометрии достоверное измерение в мм недоступно.'], ['Почему действие недоступно?', 'Сначала дождитесь загрузки серии и среза. Для AI также нужны работающая модель с поддержкой изображений и разрешённая роль; причина указана в панели.']],
   }, {
     "title": "How do I work with an image?",
-    "intro": "DICOM viewing, measurements, local AI observations and a radiologist’s report share one workspace.",
+    "intro": "DICOM viewing, measurements, AI observations and a radiologist’s report share one workspace.",
     "steps": [
         "Upload a de-identified DICOM or ZIP file and choose a series.",
         "Adjust the slice, window, zoom and measurements. AI analyzes the selected slice.",

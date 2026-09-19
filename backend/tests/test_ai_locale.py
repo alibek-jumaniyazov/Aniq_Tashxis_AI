@@ -254,3 +254,49 @@ def test_transformers_final_user_instruction_keeps_language_on_initial_and_repai
     assert result['language'] == 'ru'
     assert len(messages_seen) == 2
     assert all(messages[-1]['content'][-1]['text'].endswith(language_instruction('ru')) for messages in messages_seen)
+
+
+@pytest.mark.parametrize('language,text', [
+    ('ru', 'Заключение имеет статус needs_review и требует проверки.'),
+    ('uz', 'Ushbu xulosa needs_review hisoblanadi.'),
+    ('en', 'The result is insufficient_data and requires clarification.'),
+    ('en', 'The report is supported_on_reviewed_frames.'),
+])
+def test_internal_status_codes_cannot_leak_into_generated_prose(language, text):
+    with pytest.raises(OutputLanguageMismatch, match='internal status strings'):
+        validate_prose_language([text], language)
+
+
+@pytest.mark.parametrize('language,text', [
+    ('ru', 'В исходном файле записано «needs_review»; пояснение проверяет врач.'),
+    ('uz', 'Manbada "needs_review" yozilgan; shifokor xulosani tekshirishi kerak.'),
+    ('en', "The source says 'needs_review'; the physician must clarify its meaning."),
+])
+def test_explicit_source_quotes_may_preserve_original_internal_codes(language, text):
+    validate_prose_language([text], language)
+
+
+@pytest.mark.parametrize('term', ['tüberkülyoz', 'tüberküloz', 'tüberkulyoz'])
+def test_observed_turkish_like_spelling_is_not_generated_as_uzbek(term):
+    with pytest.raises(OutputLanguageMismatch, match='standard Uzbek medical spelling'):
+        validate_prose_language([f'Bemorning {term} haqidagi xulosasi tekshirilishi kerak.'], 'uz')
+
+
+def test_uzbek_allows_standard_spelling_quoted_terms_and_named_diacritics():
+    validate_prose_language(['Bemorning sil yoki tuberkulyoz haqidagi xulosasi tekshirilishi kerak.',
+                            'Hujjatda "tüberkülyoz" yozilgan, bu atamani shifokor aniqlashtirishi kerak.',
+                            'Müller usuli haqida hujjatda ma’lumot qayd etilgan.'], 'uz')
+    assert 'standard Uzbek' in language_instruction('uz')
+    assert 'machine-readable JSON fields' in language_instruction('uz')
+
+
+def test_internal_status_prose_gets_bounded_retry_without_changing_machine_status(monkeypatch):
+    bad = comparison('uz')
+    bad['summary'] = 'Ushbu xulosa needs_review hisoblanadi.'
+    calls = mock_completion(monkeypatch, [bad, comparison('uz')])
+    result = patient_workspace_ai.review(snapshot('uz'))
+    assert len(calls) == 3
+    assert result['diagnosis_review']['status'] == 'insufficient_data'
+    assert result['status'] == 'insufficient_data'
+    assert result['summary'] == PROSE['uz'][0]
+    assert 'internal status strings' in calls[1][1]['content']

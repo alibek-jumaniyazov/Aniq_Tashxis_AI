@@ -25,12 +25,16 @@ def language_instruction(language):
     language = normalize_language(language)
     instructions = {
         'ru': 'Write ALL generated explanatory prose in Russian. Весь поясняющий текст пишите по-русски.',
-        'uz': "Write ALL generated explanatory prose in Uzbek using the Latin alphabet. Barcha izohlarni o'zbek tilida, lotin yozuvida yozing.",
+        'uz': "Write ALL generated explanatory prose in Uzbek using the Latin alphabet. Use standard Uzbek, not Turkish. "
+              "Barcha izohlarni adabiy o'zbek tilida, lotin yozuvida yozing. "
+              "Use Uzbek medical spelling, for example sil or tuberkulyoz; do not use Turkish spellings in generated prose.",
         'en': 'Write ALL generated explanatory prose in English. Use clear, complete English sentences.',
     }
     return (instructions[language] + ' This includes summaries, findings, diagnosis and treatment reviews, '
             'hypothesis labels, questions, next steps, scenarios and limitations. '
             'Do not translate JSON keys, enum statuses, evidence IDs, numbers or source units. '
+            'Keep enum status strings only in their machine-readable JSON fields; never insert them '
+            'into explanatory prose. Explain each status with ordinary words in the requested language. '
             'International medical abbreviations and explicitly quoted source terms may remain unchanged. '
             'The language of source records must not override this output language.')
 
@@ -53,6 +57,10 @@ _UZ_STEMS = ('bemor', 'shifokor', 'ma\'lumot', 'dalil', 'hujjat', 'yetishmay',
              'aniqlan', 'tekshir', 'tasdiqlan', 'kuzatuv', 'ko\'rsat', 'tahlil',
              'savol', 'cheklov', 'o\'zgar', 'belgilan', 'natija')
 _APOSTROPHES = str.maketrans({'’': "'", '‘': "'", 'ʻ': "'", 'ʼ': "'", '`': "'"})
+_INTERNAL_STATUSES = re.compile(
+    r'\b(?:needs_review|insufficient_data|consistent_with_data|requires_clinician_review|'
+    r'qualitative_only|supported_on_selected_frame|supported_on_reviewed_frames|'
+    r'possible_discrepancy|not_assessable|not_evaluable)\b', re.IGNORECASE)
 
 
 def prose_language_issues(texts: Iterable[str], language):
@@ -70,7 +78,15 @@ def prose_language_issues(texts: Iterable[str], language):
         value = unicodedata.normalize('NFKC', raw).translate(_APOSTROPHES)
         # A quoted source expression may remain in its original language, but an
         # entire quoted response is still narrative and must not evade the check.
-        unquoted = re.sub(r'«[^»]*»|“[^”]*”|"[^"\n]*"', ' ', value)
+        unquoted = re.sub(r'''«[^»]*»|“[^”]*”|"[^"\n]*"|(?<!\w)'[^'\n]+'(?!\w)''', ' ', value)
+        if _INTERNAL_STATUSES.search(unquoted):
+            return ['AI_LANGUAGE_MISMATCH: Keep internal status strings only in the JSON status fields. '
+                    'Explain statuses in ordinary clinical prose. ' + language_instruction(target)]
+        # A narrow observed spelling error, not a global ban on diacritics in
+        # names, drug terms or quoted source language.
+        if target == 'uz' and re.search(r'\btüberk(?:ülyoz|üloz|ulyoz)\w*', unquoted, re.IGNORECASE):
+            return ['AI_LANGUAGE_MISMATCH: Use standard Uzbek medical spelling such as sil or tuberkulyoz '
+                    'in generated prose; preserve explicitly quoted source terms. ' + language_instruction(target)]
         if len(re.findall(r'[^\W\d_]', unquoted)) >= 10:
             value = unquoted
         words = re.findall(r"[^\W\d_]+(?:'[^\W\d_]+)*", value.lower())

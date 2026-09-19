@@ -13,6 +13,24 @@ function analysis(overrides: Partial<Run> = {}): Run {
 }
 
 describe('AI result trust and actions', () => {
+  it('shows the actual saved OpenAI model without relabelling it as MedGemma', () => {
+    const run = analysis()
+    run.result.provenance = 'openai_api'
+    run.result.provider = 'openai'
+    run.result.model_id = 'actual-project-model'
+    render(<AiAnalysisPanel run={run}/>)
+    expect(screen.getAllByText('aiOpenAIResult').length).toBeGreaterThan(0)
+    expect(screen.getByText('actual-project-model')).toBeTruthy()
+    expect(screen.queryByText('aiLocalResult')).toBeNull()
+    expect(screen.getByText('Confirmed observation only.')).toBeTruthy()
+  })
+
+  it('recognizes the neutral inference stage without publishing incomplete prose', () => {
+    render(<AiAnalysisPanel run={analysis({ status: 'running', stage: 'ai_inference' })}/>)
+    expect(screen.getByText('aiResultModelWorking')).toBeTruthy()
+    expect(screen.queryByText('Confirmed observation only.')).toBeNull()
+  })
+
   it('hides another-language clinical prose and offers regeneration in the interface language', () => {
     locale.language = 'uz'
     const retry = vi.fn()

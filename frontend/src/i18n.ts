@@ -17,14 +17,15 @@ import { patientNavRu, patientNavUz, patientNavEn } from './patientNavigationTra
 import { patientWorkspaceRu, patientWorkspaceUz, patientWorkspaceEn } from './patientWorkspaceTranslations'
 import { settingsRu, settingsUz, settingsEn } from './settingsTranslations'
 import { analysisLocaleRu, analysisLocaleUz, analysisLocaleEn } from './analysisLocaleTranslations'
+import { aiProviderRu, aiProviderUz, aiProviderEn } from './aiProviderTranslations'
 
 import { supportedLanguages, normalizeLanguage, type LanguageCode } from './localeCodes'
 export { supportedLanguages, normalizeLanguage, type LanguageCode } from './localeCodes'
 
 export const translations = {
-  ru: { ...workflowRu, ...notificationRu, ...workspaceRu, ...aiAnalysisRu, ...workflowPolishRu, ...baseRu, ...interfaceRu, ...clinicalLocaleRu, ...commerceRu, ...landingRu, ...errorRu, ...patientRu, ...patientNavRu, ...patientWorkspaceRu, ...settingsRu, ...analysisLocaleRu },
-  uz: { ...workflowUz, ...notificationUz, ...workspaceUz, ...aiAnalysisUz, ...workflowPolishUz, ...baseUz, ...interfaceUz, ...clinicalLocaleUz, ...commerceUz, ...landingUz, ...errorUz, ...patientUz, ...patientNavUz, ...patientWorkspaceUz, ...settingsUz, ...analysisLocaleUz },
-  en: { ...workflowEn, ...notificationEn, ...workspaceEn, ...aiAnalysisEn, ...workflowPolishEn, ...baseEn, ...interfaceEn, ...clinicalLocaleEn, ...commerceEn, ...landingEn, ...errorEn, ...patientEn, ...patientNavEn, ...patientWorkspaceEn, ...settingsEn, ...analysisLocaleEn },
+  ru: { ...workflowRu, ...notificationRu, ...workspaceRu, ...aiAnalysisRu, ...workflowPolishRu, ...baseRu, ...interfaceRu, ...clinicalLocaleRu, ...commerceRu, ...landingRu, ...errorRu, ...patientRu, ...patientNavRu, ...patientWorkspaceRu, ...settingsRu, ...analysisLocaleRu, ...aiProviderRu },
+  uz: { ...workflowUz, ...notificationUz, ...workspaceUz, ...aiAnalysisUz, ...workflowPolishUz, ...baseUz, ...interfaceUz, ...clinicalLocaleUz, ...commerceUz, ...landingUz, ...errorUz, ...patientUz, ...patientNavUz, ...patientWorkspaceUz, ...settingsUz, ...analysisLocaleUz, ...aiProviderUz },
+  en: { ...workflowEn, ...notificationEn, ...workspaceEn, ...aiAnalysisEn, ...workflowPolishEn, ...baseEn, ...interfaceEn, ...clinicalLocaleEn, ...commerceEn, ...landingEn, ...errorEn, ...patientEn, ...patientNavEn, ...patientWorkspaceEn, ...settingsEn, ...analysisLocaleEn, ...aiProviderEn },
 }
 function storedLanguage() {
   const requested = new URLSearchParams(window.location.search).get('lang')

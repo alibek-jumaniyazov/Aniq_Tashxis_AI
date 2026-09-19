@@ -145,7 +145,7 @@ COMPARISON_COPY = {
         'scenario': 'Сохранение или изменение симптомов при дальнейшем наблюдении.',
         'condition': 'Сценарий зависит от уточнённого диагноза, фактического лечения и будущих результатов; эти сведения ещё не известны.',
         'monitor': 'Врач сопоставляет жалобы, объективную динамику и новые исследования на последующих визитах.',
-        'limit': 'Авторский синтетический пример, не ответ MedGemma и не клиническая рекомендация. Итог требует проверки врачом.',
+        'limit': 'Авторский синтетический пример, не результат запуска AI и не клиническая рекомендация. Итог требует проверки врачом.',
     },
     'uz': {
         'intro': 'Tasdiqlangan yozuvlarning o‘quv solishtirishi: ',
@@ -173,7 +173,7 @@ COMPARISON_COPY = {
         'scenario': 'Keyingi kuzatuvda simptomlarning saqlanishi yoki o‘zgarishi.',
         'condition': 'Ssenariy aniqlashtirilgan tashxis, haqiqiy davolash va kelajak natijalariga bog‘liq; bu ma’lumotlar hali noma’lum.',
         'monitor': 'Shifokor keyingi tashriflarda shikoyatlar, obyektiv dinamika va yangi tekshiruvlarni solishtiradi.',
-        'limit': 'Muallif tayyorlagan sintetik misol; MedGemma javobi yoki klinik tavsiya emas. Yakun shifokor tekshiruvini talab qiladi.',
+        'limit': 'Muallif tayyorlagan sintetik misol; AI ishga tushirish natijasi yoki klinik tavsiya emas. Yakun shifokor tekshiruvini talab qiladi.',
     },
     'en': {
         'intro': 'Educational comparison of confirmed records: ',
@@ -201,6 +201,6 @@ COMPARISON_COPY = {
         'scenario': 'Symptoms may persist or change during further follow-up.',
         'condition': 'The scenario depends on the clarified diagnosis, actual treatment and future findings, which remain unknown.',
         'monitor': 'The physician compares symptoms, objective changes and new investigations at subsequent visits.',
-        'limit': 'Authored synthetic example, not a MedGemma response or clinical recommendation. A physician must review the result.',
+        'limit': 'Authored synthetic example, not an AI inference result or clinical recommendation. A physician must review the result.',
     },
 }

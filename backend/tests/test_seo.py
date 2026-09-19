@@ -35,7 +35,8 @@ def test_public_html_has_localized_server_content_and_trusted_urls(seo_client, l
     assert response.status_code == 200
     assert f'<html lang="{language}"' in response.text
     assert title in response.text
-    assert '<h1>' in response.text and 'MedGemma 4B' in response.text
+    assert '<h1>' in response.text and 'MedGemma' not in response.text
+    assert {'ru': 'внешний провайдер', 'uz': 'tashqi provayder', 'en': 'external provider'}[language] in response.text
     assert 'index, follow, max-image-preview:large' in response.text
     assert 'attacker.invalid' not in response.text and 'SECRET-PATIENT' not in response.text
     canonical = 'https://clinic.example.org/' + (f'?lang={language}' if language != 'ru' else '')

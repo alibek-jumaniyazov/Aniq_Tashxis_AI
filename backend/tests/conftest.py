@@ -9,6 +9,8 @@ os.environ['STORAGE_ROOT'] = str(Path(_temp.name) / 'files')
 os.environ['QUEUE_MODE'] = 'inline'
 os.environ['MODEL_PATH'] = ''
 os.environ['AI_BACKEND'] = 'transformers'
+os.environ['AI_PROVIDER'] = 'local_medgemma'
+os.environ['OPENAI_API_KEY'] = ''
 os.environ['DEMO_MODE'] = 'true'
 os.environ['SEED_PROFILE'] = 'minimal'
 

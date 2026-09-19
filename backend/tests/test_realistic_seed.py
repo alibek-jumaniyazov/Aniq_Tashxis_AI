@@ -266,6 +266,7 @@ def test_clinic_owner_receipts_and_developer_approval_are_usable(seeded):
 
 def test_reset_preserves_access_config_only_without_old_patient_data(seeded, tmp_path):
     import importlib.util
+    from contextlib import closing
     from pathlib import Path
     import sqlite3
     spec = importlib.util.spec_from_file_location('reset_demo_test', Path(__file__).resolve().parents[2] / 'scripts/reset_demo.py')
@@ -273,11 +274,11 @@ def test_reset_preserves_access_config_only_without_old_patient_data(seeded, tmp
     spec.loader.exec_module(module)
     old_path, staged_path = tmp_path / 'old.db', tmp_path / 'new.db'
     # Copy the isolated test schema; neither file is the running application's DB.
-    with sqlite3.connect(engine.url.database) as current:
+    with closing(sqlite3.connect(engine.url.database)) as current:
         for target_path in (old_path, staged_path):
-            with sqlite3.connect(target_path) as target:
+            with closing(sqlite3.connect(target_path)) as target:
                 current.backup(target)
-    with sqlite3.connect(old_path) as previous:
+    with closing(sqlite3.connect(old_path)) as previous, previous:
         previous.execute("UPDATE users SET password_hash='retained-hash' WHERE email='developer@demo.aniq'")
         previous.execute("INSERT INTO users VALUES ('custom-dev', 'custom-platform', 'maintainer@example.test', 'Maintainer', 'developer', 'custom-hash', 1)")
         previous.execute("INSERT INTO users VALUES ('old-customer', 'old-clinic', 'customer@example.test', 'Previous customer', 'doctor', 'old-hash', 1)")
@@ -286,7 +287,14 @@ def test_reset_preserves_access_config_only_without_old_patient_data(seeded, tmp
         previous.execute("UPDATE cases SET full_name='Old history must not be copied'")
     result = module.preserve_access_and_configuration(old_path, staged_path)
     assert result['matched_accounts'] == 12 and result['retained_accounts'] == 1
-    with sqlite3.connect(staged_path) as staged:
+    # Rename immediately, without GC, retry, sleep or process shutdown. Windows
+    # rejects this if preserve_access_and_configuration leaks either connection.
+    renamed_old = tmp_path / 'old-backed-up.db'
+    renamed_staged = tmp_path / 'new-activated.db'
+    old_path.rename(renamed_old)
+    staged_path.rename(renamed_staged)
+    assert renamed_old.exists() and renamed_staged.exists()
+    with closing(sqlite3.connect(renamed_staged)) as staged:
         assert staged.execute("SELECT password_hash FROM users WHERE email='developer@demo.aniq'").fetchone()[0] == 'retained-hash'
         assert staged.execute("SELECT role FROM users WHERE id='custom-dev'").fetchone()[0] == 'developer'
         assert staged.execute("SELECT 1 FROM users WHERE id='old-customer'").fetchone() is None

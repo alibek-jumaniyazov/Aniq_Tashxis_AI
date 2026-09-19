@@ -10,6 +10,7 @@ import socket
 import sqlite3
 import subprocess
 import sys
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -43,7 +44,9 @@ def preserve_access_and_configuration(previous, staged):
     """
     if not previous.exists():
         return {'matched_accounts': 0, 'retained_accounts': 0, 'retained_clinics': 0, 'payment_methods': 0}
-    with sqlite3.connect(f'{previous.as_uri()}?mode=ro', uri=True) as source, sqlite3.connect(staged) as target:
+    # sqlite3's own context manager commits but does NOT close file handles.
+    # Explicit closing is required before Windows can rename either database.
+    with closing(sqlite3.connect(f'{previous.as_uri()}?mode=ro', uri=True)) as source, closing(sqlite3.connect(staged)) as target, target:
         source.row_factory = target.row_factory = sqlite3.Row
         target.execute('PRAGMA foreign_keys=ON')
         tables = {row[0] for row in source.execute("SELECT name FROM sqlite_master WHERE type='table'")}

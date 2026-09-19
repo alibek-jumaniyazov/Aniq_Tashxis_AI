@@ -36,7 +36,7 @@ export default function LandingClinicalVisual({ motionEnabled }: { motionEnabled
           <div className="lcv-cross lcv-cross-tr" aria-hidden="true" />
           <div className="lcv-cross lcv-cross-bl" aria-hidden="true" />
           <div className="lcv-cross lcv-cross-br" aria-hidden="true" />
-          <span className="lcv-stage-id">AT / 04B</span>
+          <span className="lcv-stage-id">AT / AI</span>
           <span className="lcv-orientation" aria-hidden="true">{t('landingAnterior')}</span>
 
           <svg className="lcv-anatomy" viewBox="0 0 520 365" role="img" aria-label={t('landingAnatomyAlt')}>

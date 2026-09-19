@@ -1,4 +1,6 @@
 import LocalizedForm from './LocalizedForm'
+import AiProcessingNotice from './AiProcessingNotice'
+import { supportsClinicalModel } from './aiProvider'
 import { useState } from 'react'
 import { Alert, Button, Checkbox, Form, Input, Modal, Select, Space, Tag } from 'antd'
 import { useQuery } from '@tanstack/react-query'
@@ -37,7 +39,7 @@ export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { 
         : !readiness.data.clinical_review_ready ? t('INSUFFICIENT_CONFIRMED_EVIDENCE')
           : model.isPending ? t('clinicalModelChecking')
             : !model.data?.model.ready ? t('clinicalModelUnavailable')
-              : model.data.model.backend !== 'llama_cpp' ? t('clinicalModelProfile') : ''
+              : !supportsClinicalModel(model.data.model) ? t('clinicalModelProfile') : ''
 
   const launch = () => void act(async () => {
     const next = await post<{ run_id: string }>(`/cases/${c.id}/analyses`, { expected_version: c.version, include_ai: true, mode: 'current', review_focus: 'clinical_assessment', language })
@@ -62,7 +64,7 @@ export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { 
     <WorkflowGuide topic="clinical"/>
     <section className="panel clinical-workspace">
       <SectionTitle title={t('clinicalReview')} subtitle={t('clinicalReviewHint')} extra={<Sparkles size={21}/>}/>
-      <Alert type="info" showIcon message={t('clinicalReviewNotice')}/>
+      <Alert type="info" showIcon message={t('clinicalReviewNotice')}/><AiProcessingNotice model={model.data?.model}/>
       {readiness.isPending ? <Loading/> : readiness.error ? <Failure error={readiness.error} retry={() => void readiness.refetch()}/> : readiness.data && <>
         <div className="readiness-grid"><div><strong>{readiness.data.confirmed_facts}/{readiness.data.total_facts}</strong><span>{t('confirmed')}</span></div><div><strong>{readiness.data.unconfirmed_facts}</strong><span>{t('pendingFacts')}</span></div><div><strong>{readiness.data.potential_conflicts.length}</strong><span>{t('conflictingEvidence')}</span></div></div>
         {!!readiness.data.unconfirmed_facts && <Alert className="margin-bottom" type="warning" showIcon message={t('draftExcluded')} action={<Button size="small" onClick={openFacts}>{t('inspect')}</Button>}/>}

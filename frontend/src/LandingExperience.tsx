@@ -53,7 +53,7 @@ export default function LandingExperience({ user }: { user?: User | null }) {
     { icon: Stethoscope, title: t('landingDecideTitle'), text: t('landingDecideText'), tag: t('landingDecideTag'), panelTitle: t('landingDecidePanel'), items: [t('landingAiSuggestion'), t('landingAssessEvidence'), t('landingDoctorConclusion')] },
   ]
   const capabilities = [
-    { icon: Sparkles, title: 'MedGemma 4B', text: t('landingLocalAi') },
+    { icon: Sparkles, title: t('landingAiSupport'), text: t('landingConfiguredAi') },
     { icon: ScanLine, title: 'DICOM', text: t('landingWorkWithImages') },
     { icon: ShieldCheck, title: t('landingEvidenceSource'), text: t('landingVerifiableResult') },
     { icon: Users, title: t('landingOneTeam'), text: t('landingRoleAccess') },
@@ -103,6 +103,7 @@ export default function LandingExperience({ user }: { user?: User | null }) {
         <Reveal className="lx-hero-visual" enabled={motionEnabled} delay={.12}><LandingClinicalVisual motionEnabled={motionEnabled}/></Reveal>
       </div><div className="lx-container lx-hero-bottom"><span>{t('landingBrandSubtitle')}</span><a href="#imkoniyatlar">{t('landingDiscover')}<ArrowDown size={17}/></a><span>{t('landingSourceBasedWorkflow')}</span></div></section>
       <div className="lx-capabilities"><div className="lx-container">{capabilities.map(({ icon: Icon, title, text }) => <div key={title}><Icon size={22}/><span><strong>{title}</strong><small>{text}</small></span></div>)}</div></div>
+      <p className="lx-container lx-payment-note" role="note">{t('landingProcessingNotice')}</p>
 
       <section id="imkoniyatlar" className="lx-section lx-container"><Reveal className="lx-section-heading" enabled={motionEnabled}><div><span className="lx-eyebrow">{t('landingModulesEyebrow')}</span><h2>{t('landingComplexData')}<br/><em>{t('landingClearPicture')}</em></h2></div><p>{t('landingModulesIntro1')}<br/>{t('landingModulesIntro2')}</p></Reveal><div className="lx-modules">{modules.map(({ icon: Icon, title, text, label, detail, kind }, index) => <Reveal key={kind} enabled={motionEnabled} delay={index % 2 * .08}><article className={`lx-module lx-module-${kind}`}><div className="lx-module-heading"><span><Icon size={20}/>{label}</span><small>0{index + 1}</small></div><Scene enabled={motionEnabled}><ModuleArt kind={kind}/></Scene><div className="lx-module-copy"><h3>{title}</h3><p>{text}</p><span className="lx-module-detail">{detail}<ArrowUpRight size={17}/></span></div></article></Reveal>)}</div></section>
 

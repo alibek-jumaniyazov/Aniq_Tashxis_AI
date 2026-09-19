@@ -98,7 +98,8 @@ for (const { role, home, title } of roles) {
       await expect.poll(() => receipt.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(840)
       await expect(page.locator('.commerce-receipt-head')).toContainText('SYNTHETIC-NOT-PAYMENT')
       // Open only: never click approve/reject or change a request.
-      await page.getByRole('dialog').getByRole('button', { name: 'Yopish', exact: true }).click()
+      await page.getByRole('dialog').locator('button.ant-modal-close').click()
+      await expect(page.getByRole('dialog')).not.toBeVisible()
       await page.getByRole('tab', { name: 'Klinikalar', exact: true }).click()
       await expect(page.locator('.ant-tabs-tabpane-active .ant-table-row')).toHaveCount(4)
       await page.getByRole('tab', { name: 'Foydalanuvchilar', exact: true }).click()

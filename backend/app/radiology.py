@@ -3,6 +3,7 @@ import json
 import math
 import io
 import time
+from contextlib import nullcontext
 from typing import Annotated, Literal
 from fastapi import APIRouter, Depends
 import httpx
@@ -11,6 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session as DBSession
 from PIL import Image
 from .config import settings
+from . import ai_provider
 from .ai_locale import OutputLanguageMismatch, language_instruction, normalize_language, validate_prose_language
 from .dicom import render_frame
 from .db import Job, Record, User, get_db, now
@@ -268,11 +270,12 @@ def process_image_job(db, job, user, case):
     frames = review_frames(study, body)
     sample = body.analysis_scope == 'study_sample'
     coverage = {'total_frames': sum(s['count'] for s in study.data['series']), 'total_series': len(study.data['series']), 'planned_frames': len(frames), 'reviewed_frames': 0, 'reviewed_series': 0, 'frames': frames, 'sampling': 'bounded_series_sample' if sample else 'selected_frame', 'full_study_review': False}
-    result = {'image_review': None, 'image_coverage': coverage, 'limitations': [], 'model_id': settings.model_id, 'model_revision': settings.model_revision, 'prompt_version': 'image-review-3.1', 'study_id': study.id, 'series_id': body.series_id, 'frame_index': body.frame_index, 'center': body.center, 'width': body.width, 'scope': 'sampled_frames_only' if sample else 'selected_frame_only', 'language': language, 'clinical_validation': 'not_validated', 'radiologist_report': body.radiologist_report, 'report_source_id': body.report_source_id, 'report_quote': body.report_quote}
-    job.stage = 'medgemma'
+    remote = ai_provider.is_openai()
+    result = {'image_review': None, 'image_coverage': coverage, 'limitations': [], **ai_provider.result_metadata(), 'prompt_version': 'image-review-3.2', 'study_id': study.id, 'series_id': body.series_id, 'frame_index': body.frame_index, 'center': body.center, 'width': body.width, 'scope': 'sampled_frames_only' if sample else 'selected_frame_only', 'language': language, 'clinical_validation': 'not_validated', 'radiologist_report': body.radiologist_report, 'report_source_id': body.report_source_id, 'report_quote': body.report_quote}
+    job.stage = 'ai_inference'
     db.commit()
     try:
-        if settings.ai_backend != 'llama_cpp':
+        if settings.ai_backend != 'llama_cpp' and not remote:
             raise ai.ModelUnavailable('VISION_MODEL_NOT_READY')
         status = ai.model_status()
         if not status['ready']:
@@ -311,15 +314,21 @@ def process_image_job(db, job, user, case):
                 schema['properties']['frame_assessments']['maxItems'] = len(frames)
                 schema['$defs']['FrameAssessment']['properties']['frame_ref'] = {'type': 'string', 'enum': [frame['ref'] for frame in frames]}
             deadline = time.monotonic() + settings.inference_timeout_seconds
-            with httpx.Client(timeout=settings.inference_timeout_seconds, trust_env=False, headers=auth_headers()) as client:
+            connection = nullcontext(None) if remote else httpx.Client(timeout=settings.inference_timeout_seconds, trust_env=False, headers=auth_headers())
+            with connection as client:
                 for attempt in range(2):
                     remaining = deadline - time.monotonic()
                     if remaining <= 0:
                         raise ai.ModelUnavailable('AI_LANGUAGE_MISMATCH' if attempt else 'MODEL_TIMEOUT')
                     correction = '' if not attempt else '\nLANGUAGE CORRECTION: The previous response used the wrong language. Generate a fresh response from the same supplied images and report. ' + language_instruction(language)
-                    response = client.post(settings.llama_server_url + '/v1/chat/completions', timeout=remaining, json={'model': ALIAS, 'messages': [{'role': 'system', 'content': prompt + correction}, {'role': 'user', 'content': content}], 'temperature': 0, 'seed': 42, 'max_tokens': 1200 if sample else 1100, 'cache_prompt': False, 'response_format': {'type': 'json_object', 'schema': schema}})
-                    response.raise_for_status()
-                    review = output_schema.model_validate_json(completion_text(response.json()))
+                    messages = [{'role': 'system', 'content': prompt + correction}, {'role': 'user', 'content': content}]
+                    if remote:
+                        raw = ai_provider.complete(messages, schema, max_tokens=1200 if sample else 1100, timeout_seconds=remaining)
+                    else:
+                        response = client.post(settings.llama_server_url + '/v1/chat/completions', timeout=remaining, json={'model': ALIAS, 'messages': messages, 'temperature': 0, 'seed': 42, 'max_tokens': 1200 if sample else 1100, 'cache_prompt': False, 'response_format': {'type': 'json_object', 'schema': schema}})
+                        response.raise_for_status()
+                        raw = completion_text(response.json())
+                    review = output_schema.model_validate_json(raw)
                     if body.radiologist_report and review.report_comparison is None:
                         raise ValueError('Missing report comparison')
                     if not body.radiologist_report:

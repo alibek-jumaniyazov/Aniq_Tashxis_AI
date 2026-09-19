@@ -21,10 +21,11 @@ const categories = [
   { key: 'instrumental', icon: ScanLine, hint: 'pn_instrumentalHint', prefixes: ['imaging', 'radiology', 'instrumental', 'ecg'] },
 ] as const
 
-export default function PatientWorkspaceTabs({ c, user, overview, activeTab, onChange, openSource, importDmed, openTools }: {
+export default function PatientWorkspaceTabs({ c, user, overview, activeTab, onChange, openSource, importDmed, openTools, comparisonRunId, comparisonBusy }: {
   c: Case; user: User; overview: ReactNode; activeTab: PatientWorkspaceTab
   onChange: (tab: PatientWorkspaceTab) => void; openSource: (id: string) => void
   importDmed: () => void; openTools: () => void
+  comparisonRunId?: string; comparisonBusy?: boolean
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -46,8 +47,8 @@ export default function PatientWorkspaceTabs({ c, user, overview, activeTab, onC
         <div className="patient-next-step"><span>{t('pn_nextConclusionHint')}</span><Button onClick={() => onChange('conclusion')}>{t('pn_conclusionAction')} →</Button></div>
       </> },
       { key: 'conclusion', label: <span><Stethoscope size={15}/>{t('pw_doctor_conclusion')}</span>, children: <><PatientDataSection c={c} user={user} category="doctor_conclusion" openSource={openSource} importDmed={importDmed}/><div className="patient-next-step"><span>{t('pn_nextComparisonHint')}</span><Button type="primary" onClick={() => onChange('comparison')}>{t('pn_compareAction')} →</Button></div></> },
-      { key: 'comparison', label: <span><Sparkles size={15}/>{t('pw_comparison')}</span>, children: <ClinicalComparison c={c} user={user} openSource={openSource} openConclusion={() => onChange('conclusion')}/> },
-      { key: 'outlook', label: <span><TrendingUp size={15}/>{t('pw_forecast')}</span>, children: <ClinicalComparison c={c} user={user} openSource={openSource} view="forecast" openConclusion={() => onChange('conclusion')}/> },
+      { key: 'comparison', label: <span><Sparkles size={15}/>{t('pw_comparison')}</span>, children: <ClinicalComparison key={`${c.id}:${comparisonRunId || ''}`} initialRunId={comparisonRunId} launchBusy={comparisonBusy} c={c} user={user} openSource={openSource} openConclusion={() => onChange('conclusion')}/> },
+      { key: 'outlook', label: <span><TrendingUp size={15}/>{t('pw_forecast')}</span>, children: <ClinicalComparison launchBusy={comparisonBusy} c={c} user={user} openSource={openSource} view="forecast" openConclusion={() => onChange('conclusion')}/> },
     ]}/>
   </div>
 }

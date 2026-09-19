@@ -1,11 +1,23 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 import { updateMetadata } from './Seo'
+import content from './seoContent.json'
+import { landingUz, landingRu, landingEn } from './landingTranslations'
 
 const configured = { origin: 'https://clinic.example.org', indexing: true }
 afterEach(() => { document.head.innerHTML = ''; document.body.innerHTML = '' })
 
 describe('public discovery and private clinical metadata', () => {
+  it('public copy stays provider-neutral and discloses external cloud processing in all languages', () => {
+    const translations = { ru: landingRu, uz: landingUz, en: landingEn }
+    for (const language of ['ru', 'uz', 'en'] as const) {
+      const copy = translations[language]
+      expect(JSON.stringify(copy)).not.toMatch(/MedGemma|\b4B\b|локальная модель AI|Lokal AI modeli|Local AI model/i)
+      expect(JSON.stringify(content[language])).not.toMatch(/MedGemma|\b4B\b|local-only/i)
+      expect(copy.landingProcessingNotice).toMatch({ ru: /внешний провайдер/, uz: /tashqi provayder/, en: /external provider/ }[language])
+      expect(content[language].limitation).toMatch({ ru: /внешний провайдер/, uz: /tashqi provayder/, en: /external provider/ }[language])
+    }
+  })
   it.each(['ru', 'uz', 'en'] as const)('publishes stable %s landing URLs and translated metadata', language => {
     updateMetadata('/', language, configured)
     expect(document.documentElement.lang).toBe(language)

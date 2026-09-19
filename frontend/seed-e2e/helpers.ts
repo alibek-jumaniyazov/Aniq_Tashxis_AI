@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 export interface SeedPatient { id: string; alias: string; full_name: string; demo: boolean; version: number }
 export type Language = 'ru' | 'uz' | 'en'
@@ -31,7 +31,21 @@ export async function login(page: Page, role = 'doctor') {
   await page.goto('/login')
   await page.getByLabel('Parol', { exact: true }).fill(environment?.SEED_DEMO_PASSWORD || 'AniqDemo!2026')
   await page.getByLabel('Elektron pochta').fill(`${role}@demo.aniq`)
-  await page.getByRole('button', { name: 'Ish maydoniga kirish', exact: true }).click()
+  const submit = async () => {
+    const response = page.waitForResponse(result => new URL(result.url()).pathname === '/api/v1/auth/login' && result.request().method() === 'POST')
+    await page.getByRole('button', { name: 'Ish maydoniga kirish', exact: true }).click()
+    return response
+  }
+  let response = await submit()
+  if (response.status() === 429) {
+    // Twelve identities plus patient checks can exceed the real 12/min login
+    // limit. Respect the server delay without weakening the production limit.
+    const delay = Math.min(60, Math.max(1, Number(response.headers()['retry-after']) || 60)) * 1000
+    test.setTimeout(test.info().timeout + delay + 5000)
+    await new Promise(resolve => setTimeout(resolve, delay))
+    response = await submit()
+  }
+  expect(response.status(), `Demo login for ${role} must succeed`).toBe(200)
 }
 
 export async function patients(page: Page): Promise<SeedPatient[]> {

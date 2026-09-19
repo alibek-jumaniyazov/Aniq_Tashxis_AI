@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import Field, SecretStr, field_validator
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -15,8 +15,13 @@ class Settings(BaseSettings):
     seed_profile: Literal['minimal', 'realistic'] = 'realistic'
     queue_mode: str = 'local'
     redis_url: str = 'redis://localhost:6379/0'
-    ai_provider: str = 'local_medgemma'
-    ai_backend: Literal['transformers', 'llama_cpp'] = 'transformers'
+    ai_provider: Literal['local_medgemma', 'openai'] = 'local_medgemma'
+    ai_backend: Literal['transformers', 'llama_cpp', 'openai'] = 'transformers'
+    openai_api_key: SecretStr = Field(default=SecretStr(''), exclude=True, repr=False)
+    openai_model: str = Field(default='gpt-5.6-luna', pattern=r'^[a-zA-Z0-9._:-]{1,100}$')
+    openai_reasoning_effort: Literal['low', 'medium', 'high'] = 'high'
+    openai_max_output_tokens: int = Field(default=8192, ge=2048, le=32768)
+    openai_max_input_chars: int = Field(default=200000, ge=1000, le=1000000)
     llama_server_url: str = 'http://127.0.0.1:8081'
     model_id: str = 'google/medgemma-1.5-4b-it'
     model_path: str = ''

@@ -148,7 +148,10 @@ The example demonstrates the format only. Never copy its values into another pag
 Return facts as an empty array when nothing supported exists. Human confirmation
 is required for every output. Return ONLY the JSON matching the supplied schema.'''
         prompt += '\nOutput schema:\n' + json.dumps(DocumentExtraction.model_json_schema(), ensure_ascii=False)
-        result = DocumentExtraction.model_validate_json(complete([{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(pages, ensure_ascii=False)}], DocumentExtraction.model_json_schema()))
+        # Page text is required source evidence. Do not send administrative
+        # document metadata or patient identifiers from surrounding objects.
+        document_pages = [{key: page[key] for key in ('page', 'text')} for page in pages]
+        result = DocumentExtraction.model_validate_json(complete([{'role': 'system', 'content': prompt}, {'role': 'user', 'content': json.dumps(document_pages, ensure_ascii=False)}], DocumentExtraction.model_json_schema()))
         for fact in result.facts:
             page = next((p for p in pages if p['page'] == fact.page), None)
             if not page or fact.quote not in page['text'] or fact.value.casefold() not in fact.quote.casefold():
