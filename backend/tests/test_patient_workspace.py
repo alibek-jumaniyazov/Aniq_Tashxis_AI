@@ -46,7 +46,7 @@ def compare(client, case, **overrides):
 def report(version):
     return {'case_version': version, 'status': 'requires_clinician_review',
             'summary': 'Кашель требует уточнения причины.',
-            'diagnosis_review': {'status': 'needs_review', 'summary': 'Для подтверждения заключения нужен осмотр.', 'refs': ['E1', 'E2']},
+            'diagnosis_review': {'status': 'insufficient_data', 'summary': 'Для подтверждения заключения нужен осмотр.', 'refs': ['E1', 'E2']},
             'treatment_review': {'status': 'insufficient_data', 'summary': 'Лечение не описано.', 'refs': ['E2']},
             'supporting': [{'text': 'Кашель описан пациентом.', 'refs': ['E1']}],
             'discrepancies': [], 'questions': ['Каковы результаты осмотра?'],
@@ -181,10 +181,19 @@ def test_model_schema_validation_language_and_references(client, monkeypatch):
     monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
     monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
     captured = {}
+    localized = report(case['version'])
+    localized['summary'] = 'Yo‘talning sababini aniqlash uchun ko‘rik kerak.'
+    localized['diagnosis_review']['summary'] = 'Shifokor xulosasini tasdiqlash uchun ko‘rik kerak.'
+    localized['treatment_review']['summary'] = 'Davolash rejasi hujjatda ko‘rsatilmagan.'
+    localized['supporting'][0]['text'] = 'Bemor yo‘tal haqida ma’lumot bergan.'
+    localized['questions'] = ['Ko‘rik natijalari qanday?']
+    localized['next_steps'] = ['Obyektiv ma’lumotlarni hujjatda aniqlashtirish kerak.']
+    localized['five_year_outlook']['summary'] = 'Uzoq muddatli kuzatuv uchun ma’lumot yetarli emas.'
+    localized['limitations'] = ['Yakuniy qarorni shifokor qabul qiladi.']
 
     def completion(messages, schema, **kwargs):
         captured['messages'], captured['schema'] = messages, schema
-        return json.dumps(report(case['version']), ensure_ascii=False)
+        return json.dumps({key: value for key, value in localized.items() if key in schema['properties']}, ensure_ascii=False)
 
     from app import llama_adapter
     monkeypatch.setattr(llama_adapter, 'complete', completion)
@@ -216,7 +225,7 @@ def test_model_rejects_fabricated_refs_numbers_and_unvalidated_probability(clien
     else:
         invalid['questions'] = ['Недостаточно данных.', 'Недостаточно данных.']
     from app import llama_adapter
-    monkeypatch.setattr(llama_adapter, 'complete', lambda *args, **kwargs: json.dumps(invalid))
+    monkeypatch.setattr(llama_adapter, 'complete', lambda messages, schema, **kwargs: json.dumps({key: value for key, value in invalid.items() if key in schema['properties']}))
     result = compare(client, case)
     assert result['status'] == 'failed' and result['error_code'] == 'MODEL_OUTPUT_REJECTED'
     assert result['result']['comparison'] is None
@@ -261,17 +270,18 @@ def test_bounded_model_correction_keeps_schema_and_does_not_publish_bad_attempt(
 
     def completion(messages, schema, **kwargs):
         calls.append(messages)
-        choices = schema['$defs']['FiveYearOutlook']['anyOf']
-        assert choices[0]['properties']['scenarios']['maxItems'] == 0
-        assert choices[1]['properties']['scenarios']['minItems'] == 1
+        if 'FiveYearOutlook' in schema['$defs']:
+            choices = schema['$defs']['FiveYearOutlook']['anyOf']
+            assert choices[0]['properties']['scenarios']['maxItems'] == 0
+            assert choices[1]['properties']['scenarios']['minItems'] == 1
         output = report(case['version'])
         if len(calls) == 1:
             output['discrepancies'] = [{'text': 'This is the rejected model text.', 'refs': ['E2']}]
-        return json.dumps(output)
+        return json.dumps({key: value for key, value in output.items() if key in schema['properties']})
 
     monkeypatch.setattr(llama_adapter, 'complete', completion)
     job = compare(client, case)
-    assert job['status'] == 'succeeded' and len(calls) == 2
+    assert job['status'] == 'succeeded' and len(calls) == 3
     assert 'previous response failed validation' in calls[1][1]['content']
     assert 'This is the rejected model text.' not in calls[1][1]['content']
     assert job['result']['comparison']['discrepancies'] == []

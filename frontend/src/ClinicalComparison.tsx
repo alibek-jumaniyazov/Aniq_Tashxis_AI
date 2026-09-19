@@ -1,7 +1,10 @@
+import AnalysisProvenance from './AnalysisProvenance'
 import { useState } from 'react'
 import { Alert, Button, Select, Space, Tag } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { normalizeLanguage } from './localeCodes'
+import { analysisLanguage, localizedHistoryRuns, localizedRun, syntheticAnalysis } from './analysisLocale'
 import { ArrowUpRight, CheckCircle2, Circle, FileText, LoaderCircle, RefreshCw, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react'
 import { get, post } from './api/client'
 import type { Case, Run, Status, User } from './types'
@@ -22,7 +25,7 @@ export interface ComparisonReport {
 }
 export interface ComparisonRun extends Omit<Run, 'result' | 'review_focus'> {
   review_focus?: 'clinical_comparison'
-  result: { comparison?: ComparisonReport | null; limitations?: string[]; model_id?: string; prompt_version?: string }
+  result: { language?: string; provenance?: string; demo_only?: boolean; comparison?: ComparisonReport | null; limitations?: string[]; model_id?: string; prompt_version?: string }
 }
 interface ClinicalComparisonProps {
   c: Case; user: User; openSource: (id: string) => void; view?: 'comparison' | 'forecast'; openConclusion?: () => void
@@ -30,7 +33,8 @@ interface ClinicalComparisonProps {
 
 /** A saved result is shown only after a terminal successful run, never from pending or failed payloads. */
 export function ComparisonResult({ run, view = 'comparison', openSource }: { run?: ComparisonRun; view?: 'comparison' | 'forecast'; openSource: (id: string) => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const localeMismatch = !!run && analysisLanguage(run) !== normalizeLanguage(i18n.resolvedLanguage || i18n.language)
   const pending = !!run && ['queued', 'running'].includes(run.status)
   const report = run && ['succeeded', 'partial'].includes(run.status) ? run.result.comparison : null
   const evidence = report?.evidence || []
@@ -44,11 +48,12 @@ export function ComparisonResult({ run, view = 'comparison', openSource }: { run
   const reviewCard = (review: ComparisonReview, title: string) => <article className={`pw-review-card pw-review-card--${review.status}`}><h3>{t(title)}</h3><Tag color={review.status === 'consistent_with_data' ? 'cyan' : 'gold'}>{t(`pw_${review.status}`)}</Tag><p>{review.summary}</p>{refs(review.refs)}</article>
 
   return <section className="pw-ai-result" data-testid="clinical-comparison-result" aria-busy={pending} aria-label={t(view === 'forecast' ? 'pw_forecast_title' : 'pw_comparisonResults')}>
-    <header><span className="pw-ai-symbol">{view === 'forecast' ? <TrendingUp size={24}/> : <Sparkles size={24}/>}</span><div><span className="pw-ai-eyebrow">MEDGEMMA · 4B · {t('aiLocalModel')}</span><h2>{t(view === 'forecast' ? 'pw_forecast_title' : 'pw_comparisonResults')}</h2></div>{run && <StateTag status={run.status}/>}</header>
+    <header><span className="pw-ai-symbol">{view === 'forecast' ? <TrendingUp size={24}/> : <Sparkles size={24}/>}</span><div><span className="pw-ai-eyebrow">{syntheticAnalysis(run) ? t('aiSyntheticResult') : `MEDGEMMA · 4B · ${t('aiLocalModel')}`}</span><h2>{t(view === 'forecast' ? 'pw_forecast_title' : 'pw_comparisonResults')}</h2></div>{run && <StateTag status={run.status}/>}</header>
     <div className="pw-ai-body">
       {run && <div className="pw-ai-meta"><span>{t('evaluatedVersion')} <b>v{run.case_version}</b></span><span>{time(run.created_at)}</span></div>}
+      <AnalysisProvenance run={run} mismatch={localeMismatch}/>
       {run?.is_stale && <Alert showIcon type="warning" message={t('stale')} description={t('aiResultStaleHint')}/>}
-      {pending ? <div className="pw-ai-empty" role="status" aria-live="polite"><LoaderCircle size={32} className="spin"/><h3>{t('pw_compare_pending')}</h3><p>{t('pw_compare_pending_hint')}</p></div> : report ? <>
+      {pending ? <div className="pw-ai-empty" role="status" aria-live="polite"><LoaderCircle size={32} className="spin"/><h3>{t('pw_compare_pending')}</h3><p>{t('pw_compare_pending_hint')}</p></div> : localeMismatch ? null : report ? <>
         {report.status === 'insufficient_data' && <Alert showIcon type="warning" message={t('pw_insufficient_data')}/>}
         {view === 'comparison' ? <>
           <section className="pw-ai-summary"><span>{t('pw_compare_summary')}</span><p>{report.summary}</p></section>
@@ -77,20 +82,21 @@ export default function ClinicalComparison({ c, user, openSource, view = 'compar
   const records = useQuery({ queryKey: ['clinical-entries', c.id, c.version], queryFn: ({ signal }) => get<ClinicalEntriesResponse>(`/cases/${c.id}/clinical-entries`, signal) })
   const runs = useQuery({ queryKey: ['clinical-comparisons', c.id, c.version], queryFn: ({ signal }) => get<{ items: ComparisonRun[] }>(`/cases/${c.id}/clinical-comparisons`, signal), refetchInterval: query => query.state.data?.items.some(run => ['queued', 'running'].includes(run.status)) ? 2000 : false })
   const model = useQuery({ queryKey: ['status'], queryFn: ({ signal }) => get<Status>('/system/status', signal), enabled: canEdit, refetchInterval: 10000 })
-  const run = runs.data?.items.find(item => item.id === selected) || runs.data?.items[0]
+  const language = normalizeLanguage(i18n.resolvedLanguage || i18n.language)
+  const run = localizedRun(runs.data?.items || [], selected, language)
+  const localeMismatch = !!run && analysisLanguage(run) !== language
   const pending = runs.data?.items.find(item => ['queued', 'running'].includes(item.status)) || c.analyses.find(item => ['queued', 'running'].includes(item.status))
   const ready = records.data?.readiness
   const reason = !canEdit ? t('clinicalOnlyDoctor') : pending ? t('clinicalPendingHint') : records.isPending ? t('clinicalReadyChecking') : records.error ? t('clinicalReadyFailed') : !ready?.comparison_ready ? t('pw_ready_hint') : model.isPending ? t('clinicalModelChecking') : !model.data?.model.ready ? t('clinicalModelUnavailable') : model.data.model.backend !== 'llama_cpp' ? t('clinicalModelProfile') : ''
   const launch = () => void act(async () => {
-    const language = (i18n.resolvedLanguage || i18n.language || 'ru').split('-')[0]
-    const next = await post<{ run_id: string }>(`/cases/${c.id}/clinical-comparisons`, { expected_version: c.version, language: ['ru', 'uz', 'en'].includes(language) ? language : 'ru' })
+    const next = await post<{ run_id: string }>(`/cases/${c.id}/clinical-comparisons`, { expected_version: c.version, language })
     setSelected(next.run_id)
   }, false)
   const retry = () => {
     if (!run || reason) return
     if (run.is_stale) { launch(); return }
     void act(async () => {
-      const next = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version })
+      const next = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version, language })
       setSelected(next.run_id)
     }, false)
   }
@@ -104,9 +110,9 @@ export default function ClinicalComparison({ c, user, openSource, view = 'compar
     </section>
     <p className="pw-decision-notice"><ShieldCheck size={19}/>{t('pw_compare_notice')}</p>
     {runs.isPending ? <Loading/> : runs.error ? <Failure error={runs.error} retry={() => void runs.refetch()}/> : <>
-      {!!runs.data?.items.length && <Select className="full-width pw-run-selector" aria-label={t('pw_comparisonResults')} value={run?.id} onChange={setSelected} options={runs.data.items.map(item => ({ value: item.id, label: `v${item.case_version} · ${time(item.created_at)} · ${t(item.status)}` }))}/>}
+      {!!runs.data?.items.length && <Select className="full-width pw-run-selector" aria-label={t('pw_comparisonResults')} value={run?.id} onChange={setSelected} options={localizedHistoryRuns(runs.data.items, language).map(item => ({ value: item.id, label: `${analysisLanguage(item).toUpperCase()} · v${item.case_version} · ${time(item.created_at)} · ${t(item.status)}` }))}/>}
       <ComparisonResult run={run} view={view} openSource={openSource}/>
-      {canEdit && run && (run.is_stale || ['partial', 'failed', 'cancelled'].includes(run.status)) && !['queued', 'running'].includes(run.status) && <div className="pw-retry"><Button icon={<RefreshCw size={16}/>} onClick={retry} loading={busy} disabled={!!reason}>{t(run.is_stale ? 'aiResultRerun' : 'retry')}</Button>{reason && <span>{reason}</span>}</div>}
+      {canEdit && run && (run.is_stale || localeMismatch || ['partial', 'failed', 'cancelled'].includes(run.status)) && !['queued', 'running'].includes(run.status) && <div className="pw-retry"><Button icon={<RefreshCw size={16}/>} onClick={retry} loading={busy} disabled={!!reason}>{t(localeMismatch ? 'aiRegenerateLanguage' : run.is_stale ? 'aiResultRerun' : 'retry')}</Button>{reason && <span>{reason}</span>}</div>}
     </>}
   </div>
 }

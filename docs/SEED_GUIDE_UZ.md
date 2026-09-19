@@ -1,75 +1,106 @@
-# Hayotiy sintetik demo — realistic-v1
+# Sintetik klinika — realistic-workspace-v2
 
-Bu seed klinikaning davom etayotgan ishini modellashtiradi. Barcha shaxslar va klinik epizodlar to‘qima. Manba fayllari, saqlangan faktlar, versiyalar, ruxsatlar va ish jarayonlari haqiqiy API orqali ishlaydi.
+Bu seed ishlayotgan klinikaning o‘quv namoyishini modellashtiradi. Barcha ismlar, klinik epizodlar, klinikalar va to‘lov arizalari to‘qima. Telefon maydonlari bo‘sh: o‘ylab topilgan haqiqiy formatdagi raqam boshqa kishiga tegishli bo‘lishi mumkin.
 
-## Tarkibi
+## Tekshirilgan tarkib
+
+Quyidagi sonlar yangi seed uchun. Login va keyingi amallar audit sonini oshiradi; saqlab qolingan qo‘shimcha developer hisoblari reset manifestida alohida sanaladi.
 
 | Ma’lumot | Soni |
 | --- | ---: |
-| Klinik holatlar | 18 |
-| Klinikadagi rollar / hisoblar | 7 |
-| Manbalar, shu jumladan sintetik DMED yozuvi | 58 |
-| Faktlar, eski tahrir bilan | 93 |
-| Shifokor izohlari / shaxsiy qoralamalar | 33 / 3 |
-| Saqlangan qoidaviy tahlillar | 18 |
-| Ogohlantirishlar / ularga javoblar | 9 / 14 |
+| Asosiy klinikadagi ismli katta yoshli bemorlar | 18 |
+| Boshqa tashkilotdagi izolyatsiyalangan bemor | 1 |
+| Hisoblar / klinikalar | 12 / 4 |
+| Subyektiv, obyektiv, laborator, instrumental, shifokor xulosasi yozuvlari | 90 |
+| Manbalar / faktlar (eski tahrir bilan) | 143 / 93 |
+| Saqlangan mualliflik solishtirishlari | 45: RU 15, UZ 15, EN 15 |
+| Qoidaviy tekshiruvlar | 18 |
+| Shifokor izohlari / qoralamalar | 33 / 3 |
+| Ogohlantirishlar / javoblar | 9 / 14 |
 | Ekspert ko‘riklari | 13 |
-| DICOM seriyalari / saqlangan ko‘riklar | 5 / 3 |
-| Hisobot paketlari | 3 |
-| Boshlang‘ich audit hodisalari | 277 |
+| DICOM fantom tadqiqotlari / texnik xulosalar / ko‘riklar | 5 / 5 / 3 |
+| Agregat hisobot paketlari | 3 |
+| Sintetik obuna arizalari | 3: tasdiqlangan, kutilayotgan, rad etilgan |
+| Dastlabki audit hodisalari | 507 |
 
-Alohida tashkilotda yana bitta izolyatsiyalangan hisob va holat bor: boshqa tashkilot ma’lumotlari odatiy rollarga ko‘rinmasligi tekshiriladi. Jadvaldagi tahlillar qoidaviy natijalardir; seed MedGemma matnini to‘qimaydi. Haqiqiy AI chaqiruvlari bajarilganda tahlil va audit sonlari ortadi.
+15 bemorning besh bo‘limi tasdiqlangan va har biri uchun uch tilda joriy versiyaga mos solishtirish saqlangan. Uch bemorda yangi qabul yoki DMED importini tekshirish kutiladi. Izolyatsiyalangan kabinetdagi bemor yangi qabul holatida.
 
-## Hisoblar va namoyish yo‘li
+Saqlangan solishtirishlar **MedGemma hisoblamagan, muallif tayyorlagan o‘quv misollari**. API natijasida `provenance=synthetic_seed`, `engine=synthetic_seed/template`, `demo_only=true`, `model_id=synthetic-demo` bor. `language` so‘rovda, snapshotda va natijada saqlanadi. Interfeys ayni tilga mos natijani tanlaydi. Manba iqtiboslari asl ruscha matnda qoladi; sharh tanlangan tilda. Model mavjud bo‘lsa haqiqiy yangi AI tekshiruvi alohida ishga tushiriladi.
 
-Umumiy demo parol: `AniqDemo!2026`.
+Har bir natija manba/xulosa identifikatorlariga bog‘langan. Yetishmayotgan davolash tafsilotlari savol sifatida ko‘rsatiladi. Besh yillik bo‘lim shartli kuzatuv ssenariysi: individual foiz, kafolatli natija yoki tasdiqlangan prognoz berilmaydi. Qoidaviy tarixda laborator birlik tahriridan oldingi eskirgan run ataylab saqlangan; asosiy solishtirishlar joriy bemor versiyasiga tegishli.
 
-| Hisob | Xodim | Tayyor ish oqimi |
-| --- | --- | --- |
-| doctor@demo.aniq | Aziza Karimova | 18 holat; tasdiqlanmagan faktlar, manbalar, tuzatishlar, izohlar, AI chaqiruvi |
-| radiologist@demo.aniq | Timur Rahimov | Faqat 5 biriktirilgan holat; 2 kutilayotgan va 3 qayd etilgan ko‘rik |
-| expert@demo.aniq | Malika Yusupova | 13 ko‘rik; ko‘rilayotgan, izoh kutilayotgan, tasdiqlangan va yopilgan qarorlar |
-| quality@demo.aniq | Sardor Aliyev | Ekspert qarorlari, yangi hisobot tayyorlash va audit |
-| sender@demo.aniq | Dilnoza Saidova | Qoralamani tasdiqlash; tasdiqlangan paketni mock qabul qiluvchiga yuborish |
-| admin@demo.aniq | Bekzod Nurmatov | Jamoa ro‘yxati, rol taqsimoti, tizim holati va xodim nomlari bilan audit |
-| analyst@demo.aniq | Nodira Usmanova | Faqat yuborilgan shaxssizlantirilgan agregat, PDF va JSON |
+## Hisoblar
 
-Login qilganda rolga mos bosh sahifa ochiladi. Ruxsat berilmagan URL interfeysda mos bo‘limga qaytaradi; API ham o‘z ruxsat tekshiruvini bajaradi. Administrator klinik holatlarni o‘qiy olmaydi; tahlilchi identifikatorlar, klinik matnlar va qoralama paketlarni olmaydi.
+Yangi seed paroli: `AniqDemo!2026`. Reset mavjud shu email hisobining o‘zgartirilgan parolini va faollik holatini saqlaydi; unda avvalgi parol ishlatiladi. Qo‘shimcha developer parollari o‘zgarmaydi. Eski sessiyalar ko‘chirilmaydi: qayta kirish kerak.
 
-## Tavsiya etilgan epizodlar
+| Hisob | Vazifa |
+| --- | --- |
+| doctor@demo.aniq | 18 bemor, klinik bo‘limlar, manbalar, uch tilli o‘quv solishtirish va yangi AI so‘rovi |
+| radiologist@demo.aniq | 5 biriktirilgan DICOM fantom, 3 tayyor va 2 kutilayotgan ko‘rik |
+| expert@demo.aniq | 13 ekspert ko‘rigi va qarorlar tarixi |
+| quality@demo.aniq | Sifat ko‘rigi, hisobotlar, audit |
+| sender@demo.aniq | Paketni tasdiqlash va mock qabul qiluvchiga yuborish |
+| admin@demo.aniq | Klinikadagi 8 a’zo, tizim va audit |
+| analyst@demo.aniq | Faqat yuborilgan shaxssizlantirilgan agregat, PDF va JSON |
+| owner@demo.aniq | Clinic 10: 3/10 klinik o‘rin, jamoa va obuna |
+| owner.pending@demo.aniq | Developer tasdig‘ini kutayotgan klinika/ariza |
+| owner.expired@demo.aniq | Obunasi tugagan klinika va rad etilgan ariza |
+| developer@demo.aniq | Klinikalar, hisoblar, tariflar, rekvizitlar va arizalarni boshqarish |
+| other@demo.aniq | Boshqa tashkilotdagi bitta alohida bemor |
 
-Kodlar seed yaratilgan yil/oyga qarab `AT-YYMM-NNN` ko‘rinishida yaratiladi. Sana-vaqtlar ishga tushirish vaqtidan oldingi 12 kun bo‘ylab tarqatilgan.
+Klinika egasi boshqaruv hisobidir; bemor bilan ishlash uchun shifokor hisobiga kiriladi. Administrator bemor tarixini, tahlilchi esa klinik matnlar va qoralama paketlarni ko‘ra olmaydi. Til va kamaytirilgan animatsiya sozlamalari brauzerda saqlanadi: baza reseti bu tanlovlarni o‘chirmaydi.
 
-- `004`, `016`: yangi qabul. Tasdiqlanmagan faktni manba bilan tekshirib tasdiqlang. Izoh oynasida avvalgi shaxsiy qoralama tiklanadi.
-- `001`, `007`, `018`: allergiya va tayinlovdagi bir xil modda. Manba havolalari, ogohlantirish holati va shifokor javoblarini oching.
-- `002`, `003`, `008`, `011`, `014`: tomon haqidagi ikki matn farqlanadi. Rentgenologda DICOM oynasi avtomatik ochiladi; mavjud ko‘riklar tarixi va yangi izoh saqlash ishlaydi.
-- `005`: laboratoriya birligi tuzatilgan. Eski fakt saqlangan, yangi fakt unga `supersedes` bilan bog‘langan; eski tahlil eskirgan deb belgilanadi.
-- `006`: laboratoriya natijasi qaror vaqtidan keyin kelgan. Joriy va tarixiy tahlilda tekshiruv qamrovi farq qiladi.
-- `010`: tayinlov bekor qilingan; faol tayinlovga oid ogohlantirish chiqarilmaydi.
-- `012`: manbaning qachon ma’lum bo‘lgani noma’lum; tarixiy tekshiruv cheklovni saqlaydi.
-- `017`: sintetik DMED importi va tasdiqlash kutilayotgan ma’lumotlar.
+## Namoyish yo‘li
 
-Yuborilgan paketda beshta ekspert tasdiqlagan holat agregati bor. Qolgan ikki paketda kichik guruh soni yashirilgan. Qoralama va tasdiqlangan paketlar joriy holat versiyalariga bog‘langan, ularni davom ettirish mumkin. Holatni o‘zgartirsangiz, eski paketni yuborish bloklanishi — versiya himoyasining kutilgan ishlashi.
+Kodlar seed yaratilgan oyga qarab `AT-YYMM-NNN` ko‘rinishida; vaqtlar yaratishdan oldingi kunlarga nisbatan hisoblanadi.
 
-DICOM fayllari geometrik sintetik fantom: bemor anatomiyasi yoki klinik KT xulosasi sifatida ko‘rsatilmaydi. Matnli rentgenologik manbalar alohida hujjat ssenariysi hisoblanadi. DMED va tashqi qabul qiluvchi demo bo‘lib qoladi.
+- `001`, `007`, `018`: allergiya va faol buyurishda bir xil modda. Manba iqtiboslari, davolash sharhi va aniqlashtiruvchi savolni oching.
+- `002`, `003`, `008`, `011`, `014`: matnli radiologik hujjatlarda tomon farqi; DICOM oynasida geometrik fantom, kesimlar va texnik ko‘rik ishlaydi.
+- `004`, `016`: yangi qabul; bo‘limlar qoralama, shifokor tekshirib tasdiqlaydi.
+- `005`: gipertenziyani kuzatish, yozilgan amlodipin dozasi, faol qabul, ko‘tara olish va arterial bosim kundaligi mavjud. Davolash sharhi shu kuzatuvlarga mos. Kaliy birligining eski va tuzatilgan versiyalari ham saqlangan.
+- `006`: laborator javob dastlabki qarordan keyin kelgan; tarixiy tekshiruv uni avvaldan ma’lum deb hisoblamaydi.
+- `009` — Nigora Abdullayeva: musbat MTB/KUM natijalari sil xulosasini qo‘llab-quvvatlaydi. Rifampitsinga chidamlilik topilmagan; to‘liq sezgirlik hali tayyor emas.
+- `015` — Kamol Rahmonov: musbat natija allaqachon mavjud bo‘lgandan keyin yozilgan “sil chiqarib tashlandi” xulosasi ataylab zid. Natija laborator manba va shifokor xulosasiga havola qiladi. Natijadan oldingi dastlabki pnevmoniya taxmini xato deb belgilanmaydi.
+- `010`: bekor qilingan buyurish amaldagi dori deb talqin qilinmaydi.
+- `012`: diabetni kuzatish, metformin dozasi/qabul tartibi, ko‘tara olish, HbA1c dinamikasi va buyrak ko‘rsatkichi mavjud; davolash sharhi ularga tayangan. Alohida tashqi kaliy javobining qachon mavjud bo‘lgani noma’lum, retrospektiv cheklov saqlanadi.
+- `017`: DMEDning besh bo‘limli sintetik importi tekshirishni kutadi. Haqiqiy DMED ulanishi yo‘q.
+- Developer → arizalar: `owner.pending` klinikasining sintetik chekini oching va tasdiqlang. Egasi hisobida obuna faollashadi; haqiqiy tushum ko‘rsatkichi o‘zgarmaydi.
 
-## Tozalash va qayta yaratish
+DICOM — **geometrik fantom**, bemor anatomiyasi yoki patologiyasi emas. Texnik xulosalar buni ochiq aytadi. Matnli KT tavsiflari alohida o‘quv hujjatlari; mos haqiqiy KT yuklangan deb aytilmaydi. Cheklar `SYNTHETIC DEMO - NOT A BANK RECEIPT` va `NO MONEY WAS TRANSFERRED` yozuvli rasmlardir, real to‘lov dalili emas.
 
-API, Vite va workerlarni to‘xtatib, loyiha ildizida:
+Ikki to‘liq davolash tarixi yangi tavsiya emas, sintetik shifokor qaydidir. Doza shakllarining mantiqiyligi AQSh DailyMed rasmiy yorliqlaridagi [amlodipin](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f18148f9-42b2-43dc-9cf8-212d9121dc5f) va [metformin](https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=239834b0-121a-4903-b3ee-90bb4db4753b) ma’lumotlari bilan tekshirildi (2026-09-19). Bu O‘zbekiston klinik protokoli yoki individual bemorga buyurish da’vosi emas.
+
+Yuborilgan agregatda beshta ekspert tasdiqlagan holat bor; boshqa ikki paket kichik guruh sonini yashiradi. Paketlar joriy versiyalarga bog‘langan: bemor o‘zgarsa eski paketni yuborish bloklanishi kutilgan himoya.
+
+## Staging, zaxira va reset
+
+Ishlayotgan ilovani o‘zgartirmasdan staging nusxasi yaratish:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/reset_demo.py --build-only
+```
+
+Almashtirishdan oldin API, Vite va workerlarni to‘xtating:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/reset_demo.py --reset-demo
 powershell -ExecutionPolicy Bypass -File scripts/start.ps1
 ```
 
-Skript faqat standart `runtime/aniq.db` + `runtime/files` va `DEMO_MODE=true` profilida ishlaydi. Avval alohida staging bazada seed yaratadi va manba SHA-256, bog‘lanishlar, versiyalar hamda hisobot xeshlarini tekshiradi. So‘ng SQLite yaxlitligi va WAL checkpointini tekshirib, mavjud baza/fayllarni birgalikda zaxiraga ko‘chiradi. Aktivlashtirish xatosida eski fayllarni joyiga qaytaradi. Model vaznlari, lokal model kaliti va `.env` o‘zgarmaydi.
+Skript faqat standart `runtime/aniq.db`, `runtime/files`, `DEMO_MODE=true` profili bilan ishlaydi. Avval staging baza/fayllari yaratiladi. Manba SHA-256, iqtiboslar, versiyalar, solishtirish sxemasi/havolalari, hisobot xeshlari, chek fayllari va tashqi kalitlar tekshiriladi.
 
-Zaxira manzili terminalda va `runtime/seed-manifest.json` da saqlanadi. Tiklashda barcha API/workerlarni to‘xtating, joriy `aniq.db`, mavjud `aniq.db-wal`, `aniq.db-shm` va `files` ni boshqa xavfsiz papkaga o‘tkazing; tanlangan zaxiradagi `aniq.db` va `files` ni juft holda `runtime/` ga qaytaring. Turli zaxiralarning bazasi va fayllarini aralashtirmang. Qayta ishga tushirgandan keyin login qiling.
+Mavjud demo email hisoblarining parol xeshlari/faolligi, qo‘shimcha developer hisoblari, tariflar va ochiq to‘lov konfiguratsiyasi stagingga saqlanadi. Zarur developerga tegishli klinika konteynerigina ko‘chishi mumkin. Boshqa eski klinikalar, mijoz/shifokor hisoblari, tarix, sessiyalar va arizalar faqat zaxirada qoladi.
 
-Oddiy server ishga tushishi mavjud foydalanuvchilarni aniqlasa, seedni takrorlamaydi. `SEED_PROFILE=minimal` faqat kichik regressiya testlari uchun; odatiy qiymat `realistic`.
+Keyin SQLite yaxlitligi va WAL checkpoint tekshiriladi. Eski baza/fayllar birga `runtime/backups/<UTC-vaqt>/` ga ko‘chiriladi, yangi juftlik aktivlashtiriladi. Aktivlashtirish xatosida eski juftlik qaytariladi. Manifest `counts` va `preserved` sonlarini saqlaydi; parol/token chiqarmaydi. Model fayllari, lokal model kaliti va `.env` o‘zgarmaydi.
+
+Tiklash: xizmatlarni to‘xtating, joriy `aniq.db`, mavjud WAL/SHM va `files`ni xavfsiz boshqa papkaga o‘tkazing; tanlangan bitta zaxiradagi `aniq.db` va `files`ni birga qaytaring. Turli zaxiralarning bazasi/fayllarini aralashtirmang.
+
+Oddiy start mavjud hisobni topsa, seedni takrorlamaydi. `SEED_PROFILE=minimal` kichik regressiya testlari uchun, odatiy demo esa `realistic`.
 
 ## Tekshiruv
 
-`backend/tests/test_realistic_seed.py` barcha rol chegaralari, tashkilot izolyatsiyasi, haqiqiy fayllar va iqtiboslar, o‘zgarmas eski faktlar, retrospektiv tahlil, ekspert qarori, sender tasdig‘i/yuborishi, PDF/JSON xeshlari va DICOM ko‘riklarining saqlanishini tekshiradi. Bu muhandislik tekshiruvlari; klinik sifat da’vosi emas.
+```powershell
+.\.venv\Scripts\python.exe -m pytest backend/tests/test_realistic_seed.py -q
+```
 
-Asosiy ilova ishga tushganda `frontend/` ichida `npm.cmd run test:seed` yetti rolni real brauzerda ochadi: Uzbek interfeys, rol bosh sahifasi, tayyor ma’lumot, DICOM ko‘rigi, agregatning maxfiyligi va 390 px telefon ko‘rinishi tekshiriladi. Bu testlar klinik yozuvlarni o‘zgartirmaydi; login va kirish auditi yoziladi. Oddiy `npm.cmd run test:e2e` esa izolyatsiyalangan kichik test bazasida yaratish/tasdiqlash/yuborish amallarini bajaradi.
+12 izolyatsiyalangan test manba/versiyalar, barcha rollar, tashkilot izolyatsiyasi, besh klinik bo‘lim, uch tilli joriy solishtirish, to‘liq yozilgan ikki davolash sxemasiga mos sharh, TB natijasi xulosadan oldin mavjudligi, DICOM fayllari, ekspert/sender jarayoni, egasi/developer obuna tasdig‘i, resetning kirish/configuratsiyani tarixsiz saqlashi va yangi subprocessda barcha jadvallar yaratilishini tekshiradi. Ular vaqtinchalik bazada ishlaydi; real xizmatga tegmaydi. Bu dasturiy izchillik tekshiruvi, klinik samaradorlik isboti emas.

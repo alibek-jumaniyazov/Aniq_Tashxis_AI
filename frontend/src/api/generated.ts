@@ -1491,6 +1491,19 @@ export interface components {
              * @enum {string}
              */
             review_focus: "documentation" | "clinical_assessment";
+            /**
+             * Language
+             * @default ru
+             * @enum {string}
+             */
+            language: "ru" | "uz" | "en";
+        };
+        /** AnalysisRetry */
+        AnalysisRetry: {
+            /** Expected Version */
+            expected_version: number;
+            /** Language */
+            language?: ("ru" | "uz" | "en") | null;
         };
         /** AuthResponse */
         AuthResponse: {
@@ -2899,7 +2912,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VersionBody"];
+                "application/json": components["schemas"]["AnalysisRetry"];
             };
         };
         responses: {

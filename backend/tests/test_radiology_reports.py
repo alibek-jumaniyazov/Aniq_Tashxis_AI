@@ -105,7 +105,8 @@ def test_report_comparison_is_grounded_in_selected_frame_and_snapshot(client, ca
     assert captured[0]['messages'][0]['role'] == 'system'
     assert 'Never declare a doctor correct or incorrect' in captured[0]['messages'][0]['content']
     assert report in captured[0]['messages'][1]['content'][0]['text']
-    assert captured[0]['messages'][1]['content'][1]['image_url']['url'].startswith('data:image/png;base64,')
+    images = [item for item in captured[0]['messages'][1]['content'] if item['type'] == 'image_url']
+    assert images[0]['image_url']['url'].startswith('data:image/png;base64,')
 
 
 def test_phantom_never_validates_clinical_report(client, case, monkeypatch):

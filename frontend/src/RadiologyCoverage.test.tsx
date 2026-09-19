@@ -20,6 +20,16 @@ it('opens the exact source series, slice and window without implying full covera
   expect(openFrame).toHaveBeenCalledWith(frame)
 })
 
+it('retains numeric coverage and source navigation while hiding other-language findings', () => {
+  const openFrame = vi.fn()
+  render(<RadiologyCoverage run={run} onOpenFrame={openFrame} showNarrative={false}/>)
+  expect(screen.getByText('1/180 frames; 1/2 series')).toBeTruthy()
+  expect(screen.queryByText('Visible geometric pattern.')).toBeNull()
+  expect(screen.queryByText('Only one frame was assessed.')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'rwOpenEvidence' }))
+  expect(openFrame).toHaveBeenCalledWith(frame)
+})
+
 it.each(['queued', 'running', 'cancelled', 'failed'])('hides leftover frame findings on %s jobs', status => {
   render(<RadiologyCoverage run={{ ...run, status }} onOpenFrame={vi.fn()}/> )
   expect(screen.queryByText('Visible geometric pattern.')).toBeNull()

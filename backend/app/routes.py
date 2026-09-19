@@ -9,7 +9,8 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session as DBSession
 from .config import settings
 from .db import Case, CaseAccess, Job, PatientCodeAllocation, Record, Session, User, get_db, now
-from .schemas import AnalysisCreate, AuthResponse, CaseCreate, ConfirmFacts, FactInput, FactsPatch, ForecastCreate, ImportCreate, Login, NoteCreate, NoteDraft, ReviewCreate, VersionBody
+from .schemas import AnalysisCreate, AnalysisRetry, AuthResponse, CaseCreate, ConfirmFacts, FactInput, FactsPatch, ForecastCreate, ImportCreate, Login, NoteCreate, NoteDraft, ReviewCreate
+from .ai_locale import normalize_language
 from .security import ApiError, access_case, access_record, account_enabled, audit, bump_case, create_record, current_facts, current_user, idem_key, idempotent, require_role, serialize
 from . import jobs
 
@@ -255,7 +256,7 @@ def save_note_draft(case_id: str, body: NoteDraft, user: User = Depends(current_
 
 
 def job_json(job, case):
-    return {'id': job.id, 'run_id': job.id, 'case_id': job.case_id, 'case_version': job.case_version, 'kind': job.kind, 'review_focus': job.payload.get('review_focus', 'documentation'), 'include_ai': job.payload.get('include_ai', False), 'mode': job.payload['mode'], 'status': job.status, 'stage': job.stage, 'is_stale': job.case_version != case.version, 'created_at': job.created_at.isoformat(), 'finished_at': job.finished_at.isoformat() if job.finished_at else None, 'error_code': job.error_code, 'result': job.result}
+    return {'id': job.id, 'run_id': job.id, 'case_id': job.case_id, 'case_version': job.case_version, 'kind': job.kind, 'review_focus': job.payload.get('review_focus', 'documentation'), 'include_ai': job.payload.get('include_ai', False), 'language': normalize_language(job.payload.get('language') or (job.result or {}).get('language')), 'mode': job.payload['mode'], 'status': job.status, 'stage': job.stage, 'is_stale': job.case_version != case.version, 'created_at': job.created_at.isoformat(), 'finished_at': job.finished_at.isoformat() if job.finished_at else None, 'error_code': job.error_code, 'result': job.result}
 
 
 @router.post('/cases/{case_id}/analyses', status_code=202)
@@ -274,7 +275,7 @@ def analyse(case_id: str, body: AnalysisCreate, request: Request, user: User = D
         if any(job.case_id == case.id for job in active):
             raise ApiError(409, 'ANALYSIS_ALREADY_RUNNING', 'An analysis is already running for this case.')
         notes = [serialize(r) for r in db.scalars(select(Record).where(Record.case_id == case.id, Record.kind == 'note').order_by(Record.created_at))]
-        snapshot = {**case_snapshot(case), 'facts': current_facts(db, case.id), 'notes': notes}
+        snapshot = {**case_snapshot(case), 'facts': current_facts(db, case.id), 'notes': notes, 'language': body.language}
         if body.review_focus == 'clinical_assessment':
             from .clinical import evidence_report
             if case.age is None or not 18 <= case.age <= 120:
@@ -303,7 +304,7 @@ def get_job(job_id: str, user: User = Depends(current_user), db: DBSession = Dep
 
 
 @router.post('/analyses/{job_id}/retry', status_code=202)
-def retry_job(job_id: str, body: VersionBody, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
+def retry_job(job_id: str, body: AnalysisRetry, user: User = Depends(current_user), db: DBSession = Depends(get_db), key=Depends(idem_key)):
     require_role(user, 'doctor', 'radiologist')
     get_job(job_id, user, db)
     original = db.get(Job, job_id)
@@ -313,14 +314,24 @@ def retry_job(job_id: str, body: VersionBody, user: User = Depends(current_user)
     def run():
         if case.version != body.expected_version or case.version != original.case_version:
             raise ApiError(409, 'CASE_VERSION_CONFLICT', 'Start a new analysis for the current version.')
-        if original.status not in {'partial', 'failed', 'cancelled'}:
+        language = body.language or normalize_language(original.payload.get('language'))
+        locale_changed = language != normalize_language(original.payload.get('language'))
+        if original.status not in {'partial', 'failed', 'cancelled'} and not (original.status == 'succeeded' and locale_changed):
             raise ApiError(409, 'JOB_NOT_RETRYABLE', 'Job is not retryable.')
         active = list(db.scalars(select(Job).where(Job.tenant_id == user.tenant_id, Job.status.in_(['queued', 'running']))))
         if len(active) >= 10:
             raise ApiError(429, 'QUEUE_FULL', 'Analysis queue is full.')
         if any(job.case_id == case.id for job in active):
             raise ApiError(409, 'ANALYSIS_ALREADY_RUNNING', 'An analysis is already running for this case.')
-        retry = Job(tenant_id=user.tenant_id, actor_id=user.id, case_id=case.id, case_version=case.version, kind=original.kind, payload={**original.payload, 'retry_of': original.id})
+        payload = {**original.payload, 'retry_of': original.id, 'language': language}
+        if original.kind in {'clinical_comparison', 'imaging'}:
+            # A new inference from a prepared example is a real model request;
+            # preserve the example itself but do not inherit its seed flags.
+            payload['include_ai'] = True
+            payload.pop('seed_only', None)
+        if 'snapshot' in payload:
+            payload['snapshot'] = {**payload['snapshot'], 'language': language}
+        retry = Job(tenant_id=user.tenant_id, actor_id=user.id, case_id=case.id, case_version=case.version, kind=original.kind, payload=payload)
         db.add(retry)
         db.flush()
         audit(db, user, 'analysis.retry', retry.id)

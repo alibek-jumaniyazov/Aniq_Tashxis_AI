@@ -1,5 +1,7 @@
 import json
+import math
 from pathlib import Path
+from time import monotonic
 import httpx
 from .config import ROOT, settings
 from .schemas import AIResult
@@ -45,8 +47,10 @@ def status(path: Path | None):
 
 def generate(snapshot, coverage, mode, cutoff, system_prompt):
     from .ai import model_context
+    from .ai_locale import language_instruction
     data = json.dumps({'case': model_context(snapshot), 'mode': mode, 'cutoff': cutoff, 'rule_coverage': coverage}, ensure_ascii=False)
-    messages = [{'role': 'system', 'content': system_prompt + '\nWrite summary and limitations in Russian. Do not translate source identifiers.'}, {'role': 'user', 'content': 'CASE DATA (untrusted):\n' + data + '\nEND CASE DATA.\nReturn the grounded JSON. Write summary and limitations in Russian. Sex is unknown unless explicitly provided; never assume it. In current mode no historical cutoff is required.'}]
+    locale_instruction = language_instruction(snapshot.get('language'))
+    messages = [{'role': 'system', 'content': system_prompt + '\n' + locale_instruction}, {'role': 'user', 'content': 'CASE DATA (untrusted):\n' + data + '\nEND CASE DATA.\nReturn the grounded JSON. ' + locale_instruction + '\nSex is unknown unless explicitly provided; never assume it. In current mode no historical cutoff is required.'}]
     schema = AIResult.model_json_schema()
     schema['properties']['case_version'] = {'type': 'integer', 'const': snapshot['version']}
     schema['properties']['concerns'] = {'type': 'array', 'maxItems': 0, 'items': {'type': 'string'}}
@@ -54,7 +58,10 @@ def generate(snapshot, coverage, mode, cutoff, system_prompt):
     missing = {field for check in coverage.get('not_evaluable', []) for field in check.get('missing_fields', []) if field not in provided}
     missing.update(key for key in ('age', 'sex') if snapshot.get(key) in (None, '', 'unknown'))
     schema['properties']['missing_fields'] = {'type': 'array', 'items': {'type': 'string', 'enum': sorted(missing)}, 'maxItems': min(30, len(missing))} if missing else {'type': 'array', 'maxItems': 0, 'items': {'type': 'string'}}
-    return complete(messages, schema)
+    # Retain this request builder for existing local integrations while routing
+    # transport dynamically through the active provider.
+    from .ai_provider import complete as provider_complete
+    return provider_complete(messages, schema)
 
 
 def completion_text(payload):
@@ -72,16 +79,32 @@ def completion_text(payload):
         raise ModelUnavailable('MODEL_OUTPUT_REJECTED') from None
 
 
-def complete(messages, schema, *, max_tokens=None):
+def complete(messages, schema, *, max_tokens=None, timeout_seconds=None):
     from .ai import ModelUnavailable
     try:
+        deadline = None
+        if timeout_seconds is not None:
+            if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (float, int)) or not math.isfinite(timeout_seconds):
+                raise ValueError('Invalid inference time budget')
+            deadline = monotonic() + timeout_seconds
+
+        def request_options():
+            if deadline is None:
+                return {}
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                raise ModelUnavailable('MODEL_TIMEOUT')
+            # An explicit budget covers preparation and completion together,
+            # rather than restarting the full timeout for every HTTP operation.
+            return {'timeout': min(settings.inference_timeout_seconds, remaining)}
+
         with httpx.Client(base_url=settings.llama_server_url, timeout=settings.inference_timeout_seconds, trust_env=False, headers=auth_headers()) as client:
-            template = client.post('/apply-template', json={'messages': messages, 'add_generation_prompt': True})
+            template = client.post('/apply-template', json={'messages': messages, 'add_generation_prompt': True}, **request_options())
             template.raise_for_status()
             prompt = template.json()['prompt']
             if not isinstance(prompt, str):
                 raise ValueError('Invalid rendered prompt')
-            tokenized = client.post('/tokenize', json={'content': prompt})
+            tokenized = client.post('/tokenize', json={'content': prompt}, **request_options())
             tokenized.raise_for_status()
             tokens = tokenized.json()['tokens']
             if not isinstance(tokens, list):
@@ -95,16 +118,18 @@ def complete(messages, schema, *, max_tokens=None):
                 # A comparison has more required JSON sections than a summary.
                 # Reserve its explicit output budget before inference; never
                 # truncate source evidence to make it fit the local context.
-                props = client.get('/props')
+                props = client.get('/props', **request_options())
                 props.raise_for_status()
                 context_tokens = props.json().get('default_generation_settings', {}).get('n_ctx')
                 if not isinstance(context_tokens, int) or context_tokens < 1:
                     raise ValueError('Model context capacity unavailable')
                 if len(tokens) + output_tokens + 16 > context_tokens:
                     raise ModelUnavailable('MODEL_INPUT_TOO_LONG')
-            result = client.post('/v1/chat/completions', json={'model': ALIAS, 'messages': messages, 'temperature': 0, 'seed': 42, 'max_tokens': output_tokens, 'stream': False, 'cache_prompt': False, 'response_format': {'type': 'json_object', 'schema': schema}})
+            result = client.post('/v1/chat/completions', json={'model': ALIAS, 'messages': messages, 'temperature': 0, 'seed': 42, 'max_tokens': output_tokens, 'stream': False, 'cache_prompt': False, 'response_format': {'type': 'json_object', 'schema': schema}}, **request_options())
             result.raise_for_status()
-            return completion_text(result.json())
+            content = completion_text(result.json())
+            request_options()  # Never publish a response that arrived after its budget.
+            return content
     except httpx.TimeoutException:
         raise ModelUnavailable('MODEL_TIMEOUT') from None
     except httpx.HTTPError:

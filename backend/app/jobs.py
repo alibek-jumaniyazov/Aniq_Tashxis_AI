@@ -3,11 +3,12 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from sqlalchemy import select, update
-from . import ai
+from . import ai, ai_provider
 from .config import settings
 from .db import Job, Record, SessionLocal, User, now
 from .rules import RULE_VERSION, review_snapshot
 from .clinical import evidence_report, eligible_facts
+from .ai_locale import normalize_language
 from .security import access_case, audit, create_record
 
 pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='aniq-job')
@@ -33,15 +34,19 @@ def process_job(job_id):
                 from .patient_workspace import process_comparison
                 process_comparison(db, job, user, case)
                 return
-            snapshot = job.payload['snapshot']
+            language = normalize_language(job.payload.get('language'))
+            snapshot = {**job.payload['snapshot'], 'language': language}
             mode, cutoff = job.payload['mode'], job.payload.get('decision_time')
             coverage, candidates = review_snapshot(snapshot, mode, cutoff)
-            result = {'coverage': coverage, 'alert_ids': [], 'ai': None, 'limitations': [], 'rule_catalog_version': RULE_VERSION, 'model_id': settings.model_id, 'model_revision': settings.model_revision, 'ai_backend': settings.ai_backend, 'quantization': settings.model_quantization, 'prompt_version': ai.PROMPT_VERSION}
+            result = {'coverage': coverage, 'alert_ids': [], 'ai': None, 'limitations': [],
+                      'rule_catalog_version': RULE_VERSION, 'prompt_version': ai.PROMPT_VERSION,
+                      'language': language, 'provenance': 'documentation_rules'}
             result['data_quality'] = evidence_report(snapshot['facts'], mode, cutoff)
             from .decision import review_decision
             result['decision_review'] = review_decision(snapshot, mode, cutoff)
             if job.payload.get('include_ai'):
-                job.stage = 'medgemma'
+                result.update(ai_provider.result_metadata())
+                job.stage = 'ai_inference'
                 db.commit()
                 model_snapshot = dict(snapshot)
                 model_snapshot['facts'] = eligible_facts(snapshot['facts'], mode, cutoff)

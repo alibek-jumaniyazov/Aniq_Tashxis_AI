@@ -2,6 +2,8 @@ import LocalizedForm from './LocalizedForm'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Slider, Space } from 'antd'
 import { useTranslation } from 'react-i18next'
+import { normalizeLanguage } from './localeCodes'
+import { analysisLanguage, localizedHistoryRuns, localizedRun } from './analysisLocale'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, LoaderCircle, Maximize, Move, RotateCcw, Ruler, ScanLine, Sparkles, Upload } from 'lucide-react'
 import { api, get, post } from './api/client'
@@ -18,6 +20,7 @@ type Comparison = { status: 'supported_on_selected_frame' | 'supported_on_review
 
 export default function RadiologyWorkspace({ c, user, standalone = false }: { c: Case; user: User; standalone?: boolean }) {
   const { t, i18n } = useTranslation()
+  const language = normalizeLanguage(i18n.resolvedLanguage || i18n.language)
   const { act, busy } = useAction()
   const [upload, setUpload] = useState(false)
   const [consent, setConsent] = useState(false)
@@ -58,7 +61,8 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
   const canMeasure = user.role === 'radiologist'
   const active = c.analyses.find(r => ['queued', 'running'].includes(r.status))
   const runs = study?.analyses || []
-  const run = runs.find(r => r.id === selectedRun) || runs[0]
+  const run = localizedRun(runs, selectedRun, language)
+  const localeMismatch = !!run && analysisLanguage(run) !== language
   const comparison = (run?.result.image_review as { report_comparison?: Comparison } | null)?.report_comparison
   const evaluatedReport = (run?.result as { radiologist_report?: string } | undefined)?.radiologist_report
   const reportLimit = analysisScope === 'study_sample' ? 1500 : 3000
@@ -89,12 +93,12 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
   })
   const launchAnalysis = () => void act(async () => {
     if (!study || !series || active || loadedUrl !== imageUrl || reportQuery.isPending || reportQuery.error) return
-    const result = await post<{ run_id: string }>(`/imaging-studies/${study.id}/analyses`, { expected_version: c.version, series_id: series.id, frame_index: frameIndex, center, width, analysis_scope: analysisScope, language: i18n.resolvedLanguage?.startsWith('en') ? 'en' : i18n.resolvedLanguage?.startsWith('uz') ? 'uz' : 'ru', radiologist_report: report.radiologist_report, report_source_id: report.radiologist_report.trim() ? report.report_source_id : null, report_quote: report.radiologist_report.trim() ? report.report_quote : '' })
+    const result = await post<{ run_id: string }>(`/imaging-studies/${study.id}/analyses`, { expected_version: c.version, series_id: series.id, frame_index: frameIndex, center, width, analysis_scope: analysisScope, language, radiologist_report: report.radiologist_report, report_source_id: report.radiologist_report.trim() ? report.report_source_id : null, report_quote: report.radiologist_report.trim() ? report.report_quote : '' })
     setSelectedRun(result.run_id)
   }, false)
   const retryAnalysis = () => void act(async () => {
     if (!run || active || run.is_stale) return
-    const result = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version })
+    const result = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version, language })
     setSelectedRun(result.run_id)
   }, false)
   return <div className={`radiology-workbench ${standalone ? 'radiology-workbench--standalone' : ''}`}>
@@ -139,13 +143,13 @@ export default function RadiologyWorkspace({ c, user, standalone = false }: { c:
         {!active && loadedUrl !== imageUrl && <p className="workflow-help">{t('wpImageReadyHint')}</p>}
         {!status.data?.model.vision_ready && <Alert className="margin-top" type="info" showIcon message={status.isPending ? t('loading') : t('VISION_MODEL_NOT_READY')} action={<Button loading={status.isFetching} onClick={() => void status.refetch()}>{t('wpRetryService')}</Button>}/>}
         {!!runs.length && <>
-          <Select className="full-width margin-top" aria-label={t('imageReviewHistory')} value={run?.id} onChange={setSelectedRun} options={runs.map(r => ({ value: r.id, label: `${time(r.created_at)} · ${t(r.status)}` }))}/>
+          <Select className="full-width margin-top" aria-label={t('imageReviewHistory')} value={run?.id} onChange={setSelectedRun} options={localizedHistoryRuns(runs, language).map(r => ({ value: r.id, label: `${analysisLanguage(r).toUpperCase()} · ${time(r.created_at)} · ${t(r.status)}` }))}/>
           {run && <>
             <div className="run-meta"><span>{t('slice')} {(run.result.frame_index ?? 0) + 1} · v{run.case_version}</span>{run.result.series_id && <Button size="small" onClick={() => { setSeriesId(run.result.series_id); chooseFrame(run.result.frame_index || 0); setCenter(run.result.center ?? 40); setWidth(run.result.width ?? 400); setWindow('customWindow'); viewer.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }}>{t('openAnalysedFrame')}</Button>}</div>
-            <RadiologyCoverage run={run} onOpenFrame={openFrame}/>
+            <RadiologyCoverage run={run} onOpenFrame={openFrame} showNarrative={!localeMismatch}/>
             {evaluatedReport && <details className="rw-evaluated-report"><summary>{t('rwEvaluatedReport')}</summary><p>{evaluatedReport}</p></details>}
-            {comparison && !['queued', 'running', 'failed', 'cancelled'].includes(run.status) && <section className={`rw-comparison rw-comparison--${comparison.status}`} aria-label={t('rwComparisonTitle')}>{run.is_stale && <Alert type="warning" showIcon message={t('stale')} description={t('aiResultStaleHint')}/>}<div className="rw-comparison-heading"><Sparkles size={20}/><div><span>{t('rwComparisonTitle')}</span><h3>{t(`rwStatus_${comparison.status}`)}</h3></div></div>{!!comparison.frame_refs?.length && <p className="rw-comparison-refs">{t('rwComparisonFrames')}: {comparison.frame_refs.join(', ')}</p>}<p>{comparison.explanation}</p><h4>{t('rwVerify')}</h4><ul>{comparison.points_to_verify.map((point, index) => <li key={index}>{point}</li>)}</ul><small>{t('rwComparisonLimit')}</small></section>}
-            <AiAnalysisPanel run={run} kind="radiology" busy={busy} onRetry={canUpload && ['partial', 'failed', 'cancelled'].includes(run.status) ? retryAnalysis : undefined} retryDisabledReason={run.is_stale ? t('stale') : active ? t('wpAnalysisRunning') : !status.data?.model.vision_ready ? t('VISION_MODEL_NOT_READY') : undefined}/>
+            {comparison && !localeMismatch && !['queued', 'running', 'failed', 'cancelled'].includes(run.status) && <section className={`rw-comparison rw-comparison--${comparison.status}`} aria-label={t('rwComparisonTitle')}>{run.is_stale && <Alert type="warning" showIcon message={t('stale')} description={t('aiResultStaleHint')}/>}<div className="rw-comparison-heading"><Sparkles size={20}/><div><span>{t('rwComparisonTitle')}</span><h3>{t(`rwStatus_${comparison.status}`)}</h3></div></div>{!!comparison.frame_refs?.length && <p className="rw-comparison-refs">{t('rwComparisonFrames')}: {comparison.frame_refs.join(', ')}</p>}<p>{comparison.explanation}</p><h4>{t('rwVerify')}</h4><ul>{comparison.points_to_verify.map((point, index) => <li key={index}>{point}</li>)}</ul><small>{t('rwComparisonLimit')}</small></section>}
+            <AiAnalysisPanel run={run} kind="radiology" busy={busy} onRetry={canUpload && (localeMismatch || ['partial', 'failed', 'cancelled'].includes(run.status)) ? retryAnalysis : undefined} retryDisabledReason={run.is_stale ? t('stale') : active ? t('wpAnalysisRunning') : !status.data?.model.vision_ready ? t('VISION_MODEL_NOT_READY') : undefined}/>
           </>}
         </>}
       </div>}

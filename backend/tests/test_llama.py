@@ -119,3 +119,49 @@ def test_malformed_local_server_response_has_actionable_error(monkeypatch, broke
     monkeypatch.setattr(llama_adapter.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handle), **kw))
     with pytest.raises(ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
         llama_adapter.complete([], {})
+
+
+def test_explicit_timeout_budget_shrinks_across_http_preparation_and_completion(monkeypatch):
+    real_client = httpx.Client
+    clock = [0.0]
+    observed = []
+    monkeypatch.setattr(llama_adapter, 'monotonic', lambda: clock[0])
+
+    def handle(request):
+        observed.append(request.extensions['timeout']['read'])
+        clock[0] += 2
+        if request.url.path == '/apply-template':
+            return httpx.Response(200, json={'prompt': 'Original data'})
+        if request.url.path == '/tokenize':
+            return httpx.Response(200, json={'tokens': [1]})
+        if request.url.path == '/props':
+            return httpx.Response(200, json={'default_generation_settings': {'n_ctx': 4096}})
+        return httpx.Response(200, json={'choices': [{'finish_reason': 'stop', 'message': {'content': '{}'}}]})
+
+    monkeypatch.setattr(llama_adapter.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handle), **kw))
+    assert llama_adapter.complete([], {}, max_tokens=50, timeout_seconds=10) == '{}'
+    assert observed == [10, 8, 6, 4]
+
+
+@pytest.mark.parametrize('late_stage', ['/apply-template', '/v1/chat/completions'])
+def test_expired_adapter_budget_stops_requests_and_rejects_late_valid_response(monkeypatch, late_stage):
+    real_client = httpx.Client
+    clock = [0.0]
+    observed = []
+    monkeypatch.setattr(llama_adapter, 'monotonic', lambda: clock[0])
+
+    def handle(request):
+        observed.append(request.url.path)
+        if request.url.path == late_stage:
+            clock[0] = 11
+        if request.url.path == '/apply-template':
+            return httpx.Response(200, json={'prompt': 'Original data'})
+        if request.url.path == '/tokenize':
+            return httpx.Response(200, json={'tokens': [1]})
+        return httpx.Response(200, json={'choices': [{'finish_reason': 'stop', 'message': {'content': '{}'}}]})
+
+    monkeypatch.setattr(llama_adapter.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handle), **kw))
+    with pytest.raises(ModelUnavailable, match='MODEL_TIMEOUT'):
+        llama_adapter.complete([], {}, timeout_seconds=10)
+    if late_stage == '/apply-template':
+        assert observed == ['/apply-template']

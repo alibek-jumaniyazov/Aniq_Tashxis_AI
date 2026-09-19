@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { login, readOnlySession } from './helpers'
 
 const roles = [
   { role: 'doctor', home: '/cases', title: 'Bemorlar sharhi' },
@@ -8,17 +9,17 @@ const roles = [
   { role: 'sender', home: '/reports', title: 'Hisobotlar' },
   { role: 'admin', home: '/settings/system', title: 'Sozlamalar' },
   { role: 'analyst', home: '/reports', title: 'Hisobotlar' },
+  { role: 'owner', home: '/settings/clinic', title: 'Sozlamalar' },
+  { role: 'owner.pending', home: '/settings/clinic', title: 'Sozlamalar' },
+  { role: 'owner.expired', home: '/settings/clinic', title: 'Sozlamalar' },
+  { role: 'developer', home: '/developer', title: 'Developer kabineti' },
+  { role: 'other', home: '/cases', title: 'Bemorlar sharhi' },
 ]
 
 for (const { role, home, title } of roles) {
   test(`${role}: populated workspace, role home, mobile layout`, async ({ page }) => {
-    const errors: string[] = []
-    page.on('pageerror', error => errors.push(error.message))
-    await page.addInitScript(() => localStorage.setItem('aniq-language', 'uz'))
-    await page.goto('/login')
-    await page.getByLabel('Parol', { exact: true }).fill('AniqDemo!2026')
-    await page.getByLabel('Elektron pochta').fill(`${role}@demo.aniq`)
-    await page.getByRole('button', { name: 'Ish maydoniga kirish', exact: true }).click()
+    const verifyReadOnly = await readOnlySession(page)
+    await login(page, role)
     await expect(page).toHaveURL(new RegExp(home + '$'))
     await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toBeVisible()
     await expect(page.locator('.ant-table-row').first()).toBeVisible()
@@ -31,7 +32,7 @@ for (const { role, home, title } of roles) {
     if (role === 'admin') {
       await expect(page.getByRole('heading', { name: 'Klinika jamoasi' })).toBeVisible()
       const staff = await (await page.request.get('/api/v1/team')).json()
-      expect(staff.items).toHaveLength(7)
+      expect(staff.items).toHaveLength(8)
       for (const member of staff.items) await expect(page.getByRole('cell', { name: member.email, exact: true })).toBeVisible()
       await page.goto('/expert')
       await expect(page).toHaveURL(/\/settings\/system$/)
@@ -55,11 +56,55 @@ for (const { role, home, title } of roles) {
       await expect(page.locator('.dicom-image img')).toBeVisible()
       expect(await page.locator('.dicom-image img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(256)
       await expect(page.getByText('Д-р Тимур Рахимов', { exact: true }).last()).toBeVisible()
+      const detail = await (await page.request.get('/api/v1/cases/' + reviewed.id)).json()
+      expect(detail.studies[0].synthetic_phantom).toBe(true)
+      const reports = await (await page.request.get(`/api/v1/imaging-studies/${detail.studies[0].id}/reports`)).json()
+      expect(reports.items).toHaveLength(1)
+      expect(reports.items[0].radiologist_report).toContain('Учебный технический фантом')
       await page.screenshot({ path: 'seed-test-results/radiologist-review.png', fullPage: true })
     } else if (role === 'doctor') {
       const cases = await (await page.request.get('/api/v1/cases?page_size=100')).json()
       expect(cases.total).toBe(18)
       expect(cases.items.every((c: { alias: string }) => /^AT-\d{4}-\d{3}$/.test(c.alias))).toBe(true)
+      expect(cases.items.every((c: { full_name: string; demo: boolean }) => !!c.full_name && c.demo)).toBe(true)
+      expect(new Set(cases.items.map((c: { full_name: string }) => c.full_name)).size).toBe(18)
+    } else if (role === 'other') {
+      const cases = await (await page.request.get('/api/v1/cases')).json()
+      expect(cases.total).toBe(1)
+      expect(cases.items[0]).toMatchObject({ alias: 'ISOLATED-001', full_name: 'Лола Демирова', demo: true })
+      await expect(page.getByText('Лола Демирова', { exact: true })).toBeVisible()
+    } else if (role.startsWith('owner')) {
+      const account = await (await page.request.get('/api/v1/billing/account')).json()
+      expect(account.is_clinic_owner).toBe(true)
+      expect(account.requests).toHaveLength(1)
+      expect(account.requests[0].is_demo).toBe(true)
+      const expected = role === 'owner' ? 'active' : role === 'owner.pending' ? 'pending' : 'expired'
+      expect(account.subscription.status).toBe(expected)
+      await expect(page.getByRole('heading', { name: 'Obuna va jamoa', exact: true })).toBeVisible()
+      await expect(page.locator('.commerce-subscription-card')).toContainText(String(account.subscription.doctor_limit))
+      if (role === 'owner') {
+        expect(account.usage).toEqual({ doctors: 3, team_members: 8 })
+        await expect(page.locator('.commerce-seat-number')).toContainText('3 / 10')
+      }
+      const forbidden = await page.request.get('/api/v1/cases')
+      expect(forbidden.status()).toBe(403)
+    } else if (role === 'developer') {
+      const overview = await (await page.request.get('/api/v1/developer/overview')).json()
+      expect(overview).toMatchObject({ clinics_total: 4, active_subscriptions: 2, pending_requests: 1, approved_revenue_uzs: 0 })
+      await expect(page.locator('.commerce-metric')).toHaveCount(4)
+      await page.locator('.ant-table-row').first().getByRole('button').click()
+      const receipt = page.locator('.commerce-receipt img')
+      await expect(receipt).toBeVisible()
+      await expect.poll(() => receipt.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(840)
+      await expect(page.locator('.commerce-receipt-head')).toContainText('SYNTHETIC-NOT-PAYMENT')
+      // Open only: never click approve/reject or change a request.
+      await page.getByRole('dialog').getByRole('button', { name: 'Yopish', exact: true }).click()
+      await page.getByRole('tab', { name: 'Klinikalar', exact: true }).click()
+      await expect(page.locator('.ant-tabs-tabpane-active .ant-table-row')).toHaveCount(4)
+      await page.getByRole('tab', { name: 'Foydalanuvchilar', exact: true }).click()
+      const accounts = await (await page.request.get('/api/v1/developer/users?page_size=100')).json()
+      expect(accounts.total).toBeGreaterThanOrEqual(12)
+      await expect(page.locator('.ant-tabs-tabpane-active .ant-table-row').first()).toBeVisible()
     } else if (role === 'expert') {
       expect((await (await page.request.get('/api/v1/incidents')).json()).items).toHaveLength(13)
       await page.locator('.ant-table-row').first().getByRole('button', { name: 'Ochish', exact: true }).click()
@@ -69,6 +114,6 @@ for (const { role, home, title } of roles) {
       expect(reports.items.map((r: { status: string }) => r.status).sort()).toEqual(['approved', 'draft', 'sent'])
       await expect(page.locator('.role-metric')).toHaveCount(3)
     }
-    expect(errors).toEqual([])
+    verifyReadOnly()
   })
 }

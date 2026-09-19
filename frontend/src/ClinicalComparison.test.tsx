@@ -3,8 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ComparisonResult, type ComparisonReport, type ComparisonRun } from './ClinicalComparison'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
-afterEach(cleanup)
+const locale = vi.hoisted(() => ({ language: 'ru' }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: locale.language, language: locale.language } }) }))
+afterEach(() => { cleanup(); locale.language = 'ru' })
 
 const report: ComparisonReport = {
   case_version: 4, summary: 'The treatment decision needs clinician review.', status: 'requires_clinician_review',
@@ -22,6 +23,14 @@ function analysis(overrides: Partial<ComparisonRun> = {}): ComparisonRun {
 }
 
 describe('Clinical comparison evidence and result states', () => {
+  it('does not publish a saved English review under the Uzbek interface', () => {
+    locale.language = 'uz'
+    render(<ComparisonResult run={analysis({ language: 'en' })} openSource={vi.fn()}/>)
+    expect(screen.getByText('aiLanguageMismatch')).toBeTruthy()
+    expect(screen.queryByText(report.summary)).toBeNull()
+    expect(screen.queryByText(report.diagnosis_review.summary)).toBeNull()
+  })
+
   it.each(['queued', 'running', 'failed', 'cancelled'])('hides a leftover result when the run is %s', status => {
     render(<ComparisonResult run={analysis({ status })} openSource={vi.fn()}/>)
     expect(screen.queryByText(report.summary)).toBeNull()

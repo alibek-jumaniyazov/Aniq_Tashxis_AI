@@ -43,6 +43,7 @@ def test_clinical_review_retries_observed_english_and_empty_questions_once(monke
     assert len(calls) == 2
     assert 'пишите по-русски' in calls[0][1]['content']
     assert 'Исправьте формат' in calls[1][1]['content']
+    assert all(call[1]['content'].endswith(clinical_ai.language_instruction('ru')) for call in calls)
     assert reviewed['summary'] == result()['summary']
     assert reviewed['assessment']['status'] == 'insufficient_data'
     assert reviewed['assessment']['differential'] == []
@@ -53,7 +54,7 @@ def test_clinical_review_retries_observed_english_and_empty_questions_once(monke
 
 def test_valid_russian_review_does_not_run_a_second_inference(monkeypatch):
     calls = mocked_completions(monkeypatch, [result()])
-    assert clinical_ai.review(snapshot())['clinical_prompt_version'] == 'differential-evidence-1.2'
+    assert clinical_ai.review(snapshot())['clinical_prompt_version'] == clinical_ai.CLINICAL_PROMPT_VERSION
     assert len(calls) == 1
 
 
@@ -76,10 +77,10 @@ def test_differential_prompt_keeps_observation_timing_and_medication_status(monk
     assert reviewed['summary'] == output['summary']
 
 
-@pytest.mark.parametrize('bad_output', [result(english=True), result(questions=False)])
-def test_presentation_retry_is_bounded_and_never_publishes_unusable_prose(monkeypatch, bad_output):
+@pytest.mark.parametrize('bad_output,code', [(result(english=True), 'AI_LANGUAGE_MISMATCH'), (result(questions=False), 'MODEL_OUTPUT_REJECTED')])
+def test_presentation_retry_is_bounded_and_never_publishes_unusable_prose(monkeypatch, bad_output, code):
     calls = mocked_completions(monkeypatch, [bad_output])
-    with pytest.raises(ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
+    with pytest.raises(ModelUnavailable, match=code):
         clinical_ai.review(snapshot())
     assert len(calls) == 2
 

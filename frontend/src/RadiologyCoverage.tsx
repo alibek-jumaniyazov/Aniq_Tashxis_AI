@@ -7,7 +7,7 @@ type Frame = { ref: string; series_id: string; series_number: number; frame_inde
 type Assessment = { frame_ref: string; quality: 'readable' | 'limited' | 'unreadable'; observations: string[]; limitations: string[] }
 type ImageResult = { image_coverage?: { total_frames: number; total_series: number; planned_frames: number; reviewed_frames: number; reviewed_series: number; frames: Frame[] }; image_review?: { frame_assessments?: Assessment[] } | null }
 
-export default function RadiologyCoverage({ run, onOpenFrame }: { run: Run; onOpenFrame: (frame: Frame) => void }) {
+export default function RadiologyCoverage({ run, onOpenFrame, showNarrative = true }: { run: Run; onOpenFrame: (frame: Frame) => void; showNarrative?: boolean }) {
   const { t } = useTranslation()
   const result = run.result as ImageResult
   const coverage = result.image_coverage
@@ -21,7 +21,7 @@ export default function RadiologyCoverage({ run, onOpenFrame }: { run: Run; onOp
         <div className="rw-frame-heading"><strong>{frame.ref} · {frame.modality}</strong>{assessment && <Tag color={assessment.quality === 'readable' ? 'cyan' : assessment.quality === 'limited' ? 'gold' : 'red'}>{t(`rwQuality_${assessment.quality}`)}</Tag>}</div>
         <span className="rw-frame-location">{t('series')} {frame.series_number} · {t('slice')} {frame.frame_index + 1}/{frame.series_frames}</span>
         <Button size="small" onClick={() => onOpenFrame(frame)}>{t('rwOpenEvidence')}</Button>
-        {assessment ? <><ul>{assessment.observations.map((text, i) => <li key={i}>{text}</li>)}</ul>{assessment.limitations.map((text, i) => <p className="rw-frame-limit" key={i}>{text}</p>)}</> : !coverage.reviewed_frames && <p>{t('rwFrameNotReviewed')}</p>}
+        {assessment ? showNarrative && <><ul>{assessment.observations.map((text, i) => <li key={i}>{text}</li>)}</ul>{assessment.limitations.map((text, i) => <p className="rw-frame-limit" key={i}>{text}</p>)}</> : !coverage.reviewed_frames && <p>{t('rwFrameNotReviewed')}</p>}
         {frame.image_quality && <small>{t('rwModelPixels')}: {frame.image_quality.input_size.join(' × ')} px</small>}
       </article>
     })}</div>

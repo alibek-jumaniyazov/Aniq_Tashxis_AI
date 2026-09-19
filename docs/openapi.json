@@ -880,7 +880,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VersionBody"
+                "$ref": "#/components/schemas/AnalysisRetry"
               }
             }
           }
@@ -4190,6 +4190,16 @@
             ],
             "title": "Review Focus",
             "default": "documentation"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "default": "ru"
           }
         },
         "additionalProperties": false,
@@ -4198,6 +4208,37 @@
           "expected_version"
         ],
         "title": "AnalysisCreate"
+      },
+      "AnalysisRetry": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "ru",
+                  "uz",
+                  "en"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "AnalysisRetry"
       },
       "AuthResponse": {
         "properties": {

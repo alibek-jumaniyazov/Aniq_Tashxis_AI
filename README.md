@@ -31,13 +31,14 @@ Barchasi uchun demo parol: **`AniqDemo!2026`**. Bu hisoblar faqat lokal namoyish
 
 ## Hayotiy sintetik seed
 
-Yangi demo bazalar `realistic` profilidan boshlanadi: 18 ta klinik holat, 58 ta manba, 93 ta fakt, 33 ta izoh, 13 ta ekspert ko‘rigi, 5 ta DICOM fantom seriyasi va qoralama / tasdiqlangan / yuborilgan hisobotlar. Har bir rolga tayyor ish navbati bor. Mavjud baza server ishga tushganda o‘zgartirilmaydi.
+Yangi demo bazalar `realistic-workspace-v2` profilidan boshlanadi: asosiy klinikada 18 bemor va boshqa tashkilotda bitta bemor, 90 klinik yozuv, 143 manba, 93 fakt, 45 uch tilli solishtirish namunasi, 18 qoidaviy tekshiruv, 13 ekspert ko‘rigi, 5 DICOM fantom tadqiqoti, 4 klinika va 3 sintetik obuna arizasi. Tayyor xulosalar mualliflik o‘quv misoli sifatida belgilangan; ular MedGemma hisoblagan natija emas. Mavjud baza oddiy startda o‘zgartirilmaydi.
 
 Toza namoyish uchun API va workerlarni to‘xtating, loyiha ildizida `.\.venv\Scripts\python.exe scripts/reset_demo.py --reset-demo` ishlating. Skript yangi bazani avval alohida yaratib tekshiradi, keyin eski baza va fayllarni `runtime/backups/<vaqt>/` ga ko‘chiradi. Model va `.env` saqlanadi. So‘ng `scripts/start.ps1` bilan ishga tushirib qayta kiring. Batafsil: [SEED_GUIDE_UZ.md](docs/SEED_GUIDE_UZ.md).
 
 ## Nimalar ishlaydi
 
-- RU / UZ interfeys, moslashuvchan desktop va telefon ko‘rinishi, lokal shriftlar, animatsiyalar va reduced-motion qo‘llab-quvvatlash.
+- RU / UZ / EN interfeys va AI so‘rovi tili. Tanlangan til snapshot va natijada saqlanadi; boshqa tildagi xulosa qayta generatsiya qilinadi. Asl manba iqtiboslari tarjima qilinmaydi.
+- Moslashuvchan desktop va telefon ko‘rinishi, lokal shriftlar, animatsiyalar va reduced-motion qo‘llab-quvvatlash.
 - Qo‘lda kiritish, PDF / DOCX / TXT manbalari, aniq belgilangan DMED demo adapteri.
 - Tasdiqlanmagan draft faktlar, shifokor tasdig‘i, manbaga qaytish, aniq iqtibos / matn koordinatalari va asl faylni ruxsat bilan yuklash.
 - O‘zgarmas fakt versiyalari, optimistik versiya nazorati, hodisa / ma’lum bo‘lish / import vaqtlarini ajratish.
@@ -45,13 +46,13 @@ Toza namoyish uchun API va workerlarni to‘xtating, loyiha ildizida `.\.venv\Sc
 - Lokal ish navbati, saqlanadigan job holati, polling, bekor qilish, API orqali retry, eskirgan natija belgisi va bildirishnomalar.
 - Uchta **demo** tekshiruv: hujjatlar tomonining farqi, bir xil moddaning allergiya va faol buyurtmada uchrashi, laboratoriya yozuvi to‘liqligi. Klinik laboratoriya chegaralari va dori bazasi taxmin qilinmagan.
 - Shifokor izohi, serverdagi shaxsiy avtomatik qoralama, ogohlantirishga izohli javob, ekspert qarorlarining tarixi.
-- Yakka kadrli KT DICOM ZIP importi, geometrik validatsiya, kesim tartiblash, oyna / daraja, zoom va rentgenolog ko‘rigi. Bu M0 viewer; OHIF, 3D rekonstruksiya, avtomatik plevral suyuqlik aniqlash va segmentatsiya mavjud emas.
+- KT, MRT va boshqa qo‘llab-quvvatlangan DICOM tasvirlari / ZIP importi, geometrik validatsiya, kesim tartiblash, oyna / daraja, zoom va rentgenolog ko‘rigi. Vision modeli tanlangan kadrlarni ko‘radi; qamrov oynasi qaysi kadrlar ko‘rilganini ko‘rsatadi. Bu to‘liq hajm diagnostikasi yoki segmentatsiya emas.
 - Ekspert tasdiqlagan holatlardan shaxssizlantirilgan agregat; alohida sender tasdig‘i, PDF / JSON va tashqi tarmoqqa yubormaydigan mock kvitansiya. Kichik guruh soni yashiriladi.
 - Rol + tashkilot + holat ruxsati, HttpOnly cookie, CSRF, login tezligi cheklovi, idempotency, audit, fayl chegaralari va ZIP path traversal himoyasi.
 
 ## MedGemma 4B — lokal ulash
 
-Asosiy checkpoint: **`google/medgemma-1.5-4b-it`**. Bu Google MedGemma oilasining 4B multimodal checkpointi. Ushbu Windows kompyuteri uchun yengil **GGUF + llama.cpp Vulkan** profili tanlandi; backend faqat `127.0.0.1:8081` ga murojaat qiladi. Matnli tahlil lokal ishlaydi; tasvir projectorini yoki KT segmentatsiyasini ushbu profil o‘z ichiga olmaydi.
+Asosiy checkpoint: **`google/medgemma-1.5-4b-it`**. Bu Google MedGemma oilasining 4B multimodal checkpointi. Ushbu Windows kompyuteri uchun **GGUF + llama.cpp Vulkan** profili tanlandi; backend faqat `127.0.0.1:8081` ga murojaat qiladi. Tekshirilgan `mmproj-F16.gguf` mavjud bo‘lsa start skripti vision projectorini ham ulaydi. KT segmentatsiyasi yo‘q.
 
 Kvantlangan nusxa: [Unsloth MedGemma 1.5 4B Q4_K_M](https://huggingface.co/unsloth/medgemma-1.5-4b-it-GGUF), 2,489,894,976 bayt, revision `3855f948626b7ae42bccd082757f15078c53e758`. Model Unsloth tomonidan 4-bit formatga o‘tkazilgan; Google’ning asl BF16 fayllari bilan bir xil baytlar deb ko‘rsatilmaydi. Runtime — [llama.cpp](https://github.com/ggml-org/llama.cpp/releases/tag/b11026), build `b11026`.
 
@@ -138,7 +139,7 @@ Docker qurilishidan avval `frontend` build kerak. Migratsiya service Alembic sxe
 .\.venv\Scripts\python.exe scripts/backup.py runtime/aniq.db work/aniq-backup.db
 ```
 
-To‘liq arxiv uchun bazadan tashqari `runtime/files` ni ham alohida zaxiralang. Tiklash vaqtida backendni to‘xtating, backupni yangi joyda tekshiring, so‘ng kerakli baza va fayllarni bir xil snapshotdan tiklang. Mavjud bazani avtomatik o‘chiradigan yoki ustiga yozadigan skript yo‘q.
+To‘liq arxiv uchun bazadan tashqari `runtime/files` ni ham alohida zaxiralang. Tiklash vaqtida backendni to‘xtating, backupni yangi joyda tekshiring, so‘ng kerakli baza va fayllarni bir xil snapshotdan tiklang. Faqat aniq `--reset-demo` buyrug‘i eski bazani zaxiralab almashtiradi; `--build-only` joriy ma’lumotlarni o‘zgartirmasdan yangi seedni tekshiradi.
 
 ## Chegaralar va keyingi tashqi bog‘liqliklar
 

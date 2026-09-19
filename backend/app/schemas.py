@@ -93,11 +93,17 @@ class AnalysisCreate(StrictModel):
     decision_time: datetime | None = None
     include_ai: bool = True
     review_focus: Literal['documentation', 'clinical_assessment'] = 'documentation'
+    language: Literal['ru', 'uz', 'en'] = 'ru'
 
     @field_validator('decision_time')
     @classmethod
     def tz(cls, value):
         return FactInput.timezone_required(value)
+
+
+class AnalysisRetry(StrictModel):
+    expected_version: int = Field(ge=1)
+    language: Literal['ru', 'uz', 'en'] | None = None
 
 
 class NoteDraft(StrictModel):

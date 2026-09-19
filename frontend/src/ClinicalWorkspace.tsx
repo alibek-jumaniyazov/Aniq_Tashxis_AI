@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { Alert, Button, Checkbox, Form, Input, Modal, Select, Space, Tag } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { normalizeLanguage } from './localeCodes'
+import { analysisLanguage, localizedHistoryRuns, localizedRun } from './analysisLocale'
 import { ClipboardCheck, RefreshCw, Sparkles } from 'lucide-react'
 import { get, post } from './api/client'
 import type { Case, Readiness, Status, User } from './types'
@@ -11,7 +13,8 @@ import AiAnalysisPanel from './AiAnalysisPanel'
 import WorkflowGuide from './WorkflowGuide'
 
 export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { c: Case; user: User; openSource: (id: string) => void; openFacts: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const language = normalizeLanguage(i18n.resolvedLanguage || i18n.language)
   const { act, busy } = useAction()
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string>()
@@ -21,7 +24,8 @@ export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { 
   const readiness = useQuery({ queryKey: ['readiness', c.id, c.version], queryFn: ({ signal }) => get<Readiness>(`/cases/${c.id}/readiness`, signal) })
   const model = useQuery({ queryKey: ['status'], queryFn: ({ signal }) => get<Status>('/system/status', signal), refetchInterval: 10000, enabled: canEdit })
   const runs = c.analyses.filter(item => item.review_focus === 'clinical_assessment')
-  const run = runs.find(item => item.id === selected) || runs[0]
+  const run = localizedRun(runs, selected, language)
+  const localeMismatch = !!run && analysisLanguage(run) !== language
   const pending = c.analyses.find(item => ['queued', 'running'].includes(item.status))
   const confirmed = c.facts.filter(fact => fact.confirmed)
   const conclusionChanged = conclusionContext.version !== c.version
@@ -36,14 +40,14 @@ export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { 
               : model.data.model.backend !== 'llama_cpp' ? t('clinicalModelProfile') : ''
 
   const launch = () => void act(async () => {
-    const next = await post<{ run_id: string }>(`/cases/${c.id}/analyses`, { expected_version: c.version, include_ai: true, mode: 'current', review_focus: 'clinical_assessment' })
+    const next = await post<{ run_id: string }>(`/cases/${c.id}/analyses`, { expected_version: c.version, include_ai: true, mode: 'current', review_focus: 'clinical_assessment', language })
     setSelected(next.run_id)
   }, false)
   const retry = () => {
     if (!run) return
     if (run.is_stale) { launch(); return }
     void act(async () => {
-      const next = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version })
+      const next = await post<{ run_id: string }>(`/analyses/${run.id}/retry`, { expected_version: c.version, language })
       setSelected(next.run_id)
     }, false)
   }
@@ -77,9 +81,9 @@ export default function ClinicalWorkspace({ c, user, openSource, openFacts }: { 
       {canEdit && <p className="clinical-action-hint">{confirmed.length ? t('clinicalSavedNoAi') : t('clinicalNoConfirmedHint')}</p>}
     </section>
 
-    {!!runs.length && <div className="margin-top"><Select className="full-width" aria-label={t('clinicalReviewResults')} value={run?.id} onChange={setSelected} options={runs.map(item => ({ value: item.id, label: `v${item.case_version} · ${time(item.created_at)} · ${t(item.status)}` }))}/></div>}
+    {!!runs.length && <div className="margin-top"><Select className="full-width" aria-label={t('clinicalReviewResults')} value={run?.id} onChange={setSelected} options={localizedHistoryRuns(runs, language).map(item => ({ value: item.id, label: `${analysisLanguage(item).toUpperCase()} · v${item.case_version} · ${time(item.created_at)} · ${t(item.status)}` }))}/></div>}
     <AiAnalysisPanel run={run} kind="clinical" openSource={openSource} busy={busy}
-      onRetry={canEdit && run && (run.is_stale || ['partial', 'failed', 'cancelled'].includes(run.status)) ? retry : undefined}
+      onRetry={canEdit && run && (run.is_stale || localeMismatch || ['partial', 'failed', 'cancelled'].includes(run.status)) ? retry : undefined}
       retryDisabledReason={launchReason || undefined}
       onCancel={canEdit && run && ['queued', 'running'].includes(run.status) ? () => void act(() => post(`/analyses/${run.id}/cancel`)) : undefined}
       onReviewHypothesis={canEdit ? (hypothesis, evidence) => conclusion(hypothesis.label, evidence.filter(item => hypothesis.supporting_refs.includes(item.ref) && confirmed.some(fact => fact.id === item.fact_id)).map(item => item.fact_id), run?.id || null) : undefined}

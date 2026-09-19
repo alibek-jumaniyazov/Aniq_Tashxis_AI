@@ -6,7 +6,7 @@ from pydantic import Field, model_validator
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session as DBSession
 
-from .config import settings
+from .ai_locale import normalize_language
 from .db import Job, Record, User, get_db, now
 from .schemas import StrictModel, VersionBody
 from .security import (ApiError, access_case, access_record, audit, bump_case,
@@ -226,7 +226,7 @@ def compare(case_id: str, body: ComparisonCreate, user: User = Depends(current_u
             raise ApiError(409, 'ANALYSIS_ALREADY_RUNNING', 'An analysis is already running for this patient.')
         job = Job(tenant_id=user.tenant_id, actor_id=user.id, case_id=case.id,
                   case_version=case.version, kind='clinical_comparison',
-                  payload={'snapshot': comparison_snapshot(case, entries, facts),
+                  payload={'snapshot': {**comparison_snapshot(case, entries, facts), 'language': body.language},
                            'mode': 'current', 'include_ai': True, 'review_focus': 'clinical_comparison',
                            'language': body.language})
         db.add(job)
@@ -249,14 +249,15 @@ def comparisons(case_id: str, user: User = Depends(current_user), db: DBSession 
 
 
 def process_comparison(db, job, user, case):
-    from . import ai
+    from . import ai, ai_provider
     from .patient_workspace_ai import PROMPT_VERSION, review
-    job.stage = 'medgemma'
+    job.stage = 'ai_inference'
     db.commit()
     error = None
     comparison = None
     try:
-        comparison = review(job.payload['snapshot'], job.payload.get('language', 'ru'))
+        language = normalize_language(job.payload.get('language'))
+        comparison = review({**job.payload['snapshot'], 'language': language}, language)
     except ai.ModelUnavailable as exc:
         error = str(exc)
     except Exception:
@@ -271,8 +272,9 @@ def process_comparison(db, job, user, case):
     access_case(db, user, job.case_id)
     status = 'failed' if error else 'succeeded'
     result = {'comparison': comparison, 'ai': None, 'limitations': [error] if error else [],
-              'model_id': settings.model_id, 'model_revision': settings.model_revision,
-              'prompt_version': PROMPT_VERSION, 'clinical_validation': 'not_validated'}
+              'prompt_version': PROMPT_VERSION, 'clinical_validation': 'not_validated',
+              'language': normalize_language(job.payload.get('language')),
+              **ai_provider.result_metadata()}
     claimed = db.execute(update(Job).where(Job.id == job.id, Job.status == 'running').values(
         status=status, stage='failed' if error else 'complete', error_code=error,
         finished_at=now(), result=result))

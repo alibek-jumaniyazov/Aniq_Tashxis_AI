@@ -29,9 +29,9 @@ def snapshot():
 
 def comparison():
     return {
-        'case_version': 4, 'status': 'requires_clinician_review',
+        'case_version': 4, 'status': 'insufficient_data',
         'summary': 'В записи указан пульс 72 /min.',
-        'diagnosis_review': {'status': 'needs_review', 'summary': 'Для заключения нужен дополнительный осмотр.', 'refs': ['E1', 'E2']},
+        'diagnosis_review': {'status': 'insufficient_data', 'summary': 'Для заключения нужен дополнительный осмотр.', 'refs': ['E1', 'E2']},
         'treatment_review': {'status': 'insufficient_data', 'summary': 'Текущая схема лечения не описана.', 'refs': ['E2']},
         'supporting': [{'text': 'Пульс 72 /min.', 'refs': ['E1']}],
         'discrepancies': [], 'questions': ['Какая схема лечения назначена сейчас?'],
@@ -115,11 +115,11 @@ def test_comparison_preserves_timing_and_stopped_orders_and_corrects_bad_output_
         result = comparison()
         if len(calls) == 1:
             result['supporting'][0]['text'] = 'Недостоверная температура 42.'
-        return json.dumps(result, ensure_ascii=False)
+        return json.dumps({key: value for key, value in result.items() if key in schema['properties']}, ensure_ascii=False)
 
     monkeypatch.setattr(llama_adapter, 'complete', complete)
     result = patient_workspace_ai.review(snapshot(), 'ru')
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert 'Unsupported numeric observation in cited review' in calls[1][1]['content']
     assert 'Недостоверная температура' not in calls[1][1]['content']
     context = json.loads(calls[0][1]['content'].split('UNTRUSTED PATIENT DATA\n')[1].split('\nEND DATA')[0])
@@ -142,9 +142,9 @@ def test_failed_correction_is_failure_and_never_returns_a_fabricated_diagnosis(m
     bad['supporting'] = [{'text': 'Гипотеза подтверждена самим заключением.', 'refs': ['E2']}]
     calls = []
 
-    def complete(*args, **kwargs):
+    def complete(messages, schema, **kwargs):
         calls.append(True)
-        return json.dumps(bad)
+        return json.dumps({key: value for key, value in bad.items() if key in schema['properties']})
 
     monkeypatch.setattr(llama_adapter, 'complete', complete)
     with pytest.raises(ai.ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
@@ -162,12 +162,12 @@ def test_incomplete_model_response_retries_once_with_compact_complete_schema(mon
         calls.append((messages, schema, kwargs))
         if len(calls) == 1:
             raise ai.ModelUnavailable('MODEL_OUTPUT_INCOMPLETE')
-        return json.dumps(comparison())
+        return json.dumps({key: value for key, value in comparison().items() if key in schema['properties']})
 
     monkeypatch.setattr(llama_adapter, 'complete', complete)
     result = patient_workspace_ai.review(snapshot())
     assert result['summary'] == comparison()['summary']
-    assert len(calls) == 2
+    assert len(calls) == 3
     assert all(call[2]['max_tokens'] == 1800 for call in calls)
     assert calls[1][1]['properties']['summary']['maxLength'] < calls[0][1]['properties']['summary']['maxLength']
     assert calls[1][1]['properties']['supporting']['maxItems'] == 1
@@ -255,3 +255,136 @@ def test_diagnostic_follow_up_questions_cannot_be_duplicates_or_statements():
     assert clinical_ai.presentation_issues(result)
     result['assessment']['questions'] = ['Что показал осмотр?']
     assert not clinical_ai.presentation_issues(result)
+
+
+def test_comparison_phases_keep_original_evidence_and_do_not_promote_generated_diagnosis(monkeypatch):
+    monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    calls = []
+    authored = comparison()
+    authored['diagnosis_review']['summary'] = 'Уникальная сформулированная моделью гипотеза требует проверки.'
+
+    def complete(messages, schema, **kwargs):
+        calls.append((copy.deepcopy(messages), schema))
+        return json.dumps({key: value for key, value in authored.items() if key in schema['properties']})
+
+    monkeypatch.setattr(llama_adapter, 'complete', complete)
+    result = patient_workspace_ai.review(snapshot())
+    assert len(calls) == 2
+    assert list(calls[0][1]['properties']) == ['case_version', 'supporting', 'discrepancies', 'diagnosis_review', 'summary']
+    assert set(calls[1][1]['properties']) == set(patient_workspace_ai.TreatmentPass.model_fields)
+    assert 'FiveYearOutlook' not in calls[0][1]['$defs']
+    assert 'CitedObservation' not in calls[1][1]['$defs']
+    assert (calls[0][0][1]['content'].split('END DATA.')[0] ==
+            calls[1][0][1]['content'].split('END DATA.')[0])
+    assert authored['diagnosis_review']['summary'] not in calls[1][0][1]['content']
+    assert result['diagnosis_review']['summary'] == authored['diagnosis_review']['summary']
+    assert set(patient_workspace_ai.ComparisonResult.model_fields) <= set(result)
+
+
+def test_treatment_phase_failure_cannot_return_partial_diagnostic_success(monkeypatch):
+    monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    calls = []
+
+    def complete(messages, schema, **kwargs):
+        calls.append(schema['title'])
+        output = comparison()
+        output['questions'] = []
+        return json.dumps({key: value for key, value in output.items() if key in schema['properties']})
+
+    monkeypatch.setattr(llama_adapter, 'complete', complete)
+    with pytest.raises(ai.ModelUnavailable, match='MODEL_OUTPUT_REJECTED'):
+        patient_workspace_ai.review(snapshot())
+    assert calls == ['DiagnosisPass', 'TreatmentPass', 'TreatmentPass']
+    assert not ai._lock.locked()
+
+
+def test_each_phase_can_repair_once_without_erasing_prior_guarded_work(monkeypatch):
+    monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    calls = []
+
+    def complete(messages, schema, **kwargs):
+        calls.append(schema['title'])
+        output = comparison()
+        if len(calls) == 1:
+            output['supporting'][0]['refs'] = ['E999']
+        elif len(calls) == 3:
+            output['questions'] = []
+        return json.dumps({key: value for key, value in output.items() if key in schema['properties']})
+
+    monkeypatch.setattr(llama_adapter, 'complete', complete)
+    result = patient_workspace_ai.review(snapshot())
+    assert calls == ['DiagnosisPass', 'DiagnosisPass', 'TreatmentPass', 'TreatmentPass']
+    assert result['questions'] == comparison()['questions']
+    assert result['supporting'] == comparison()['supporting']
+
+
+def test_phase_repair_consumes_shared_time_budget_instead_of_resetting_it(monkeypatch):
+    monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
+    monkeypatch.setattr(settings, 'inference_timeout_seconds', 150)
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    clock = [0.0]
+    budgets = []
+    monkeypatch.setattr(patient_workspace_ai, 'monotonic', lambda: clock[0])
+
+    def complete(messages, schema, **kwargs):
+        budgets.append(kwargs['timeout_seconds'])
+        output = comparison()
+        if len(budgets) == 1:
+            output['supporting'][0]['refs'] = ['E999']
+            clock[0] += 140
+        elif len(budgets) == 2:
+            clock[0] += 130
+        else:
+            clock[0] += 20
+        return json.dumps({key: value for key, value in output.items() if key in schema['properties']})
+
+    monkeypatch.setattr(llama_adapter, 'complete', complete)
+    assert patient_workspace_ai.review(snapshot())['questions'] == comparison()['questions']
+    assert budgets == [150, 150, 30]
+
+
+def test_shared_budget_expiration_does_not_retry_or_publish_a_late_result(monkeypatch):
+    monkeypatch.setattr(settings, 'ai_backend', 'llama_cpp')
+    monkeypatch.setattr(settings, 'inference_timeout_seconds', 150)
+    monkeypatch.setattr(ai, 'model_status', lambda: {'ready': True})
+    clock = [0.0]
+    calls = []
+    monkeypatch.setattr(patient_workspace_ai, 'monotonic', lambda: clock[0])
+
+    def complete(messages, schema, **kwargs):
+        calls.append(schema['title'])
+        clock[0] = 301
+        return json.dumps({key: value for key, value in comparison().items() if key in schema['properties']})
+
+    monkeypatch.setattr(llama_adapter, 'complete', complete)
+    with pytest.raises(ai.ModelUnavailable, match='MODEL_TIMEOUT'):
+        patient_workspace_ai.review(snapshot())
+    assert calls == ['DiagnosisPass']
+    assert not ai._lock.locked()
+
+
+def test_echoing_doctors_diagnoses_is_not_a_specific_cited_discrepancy():
+    output = comparison()
+    output['diagnosis_review'].update(status='needs_review', summary='Врач исключил активный туберкулёз, но диагностировал внебольничную пневмонию.')
+    with pytest.raises(ValueError, match='requires a specific cited discrepancy'):
+        validate(output)
+
+
+def test_needs_review_must_cite_the_finding_that_supports_its_discrepancy():
+    output = comparison()
+    output['diagnosis_review']['status'] = 'needs_review'
+    output['discrepancies'] = [{'text': 'Наблюдение расходится с заключением врача.', 'refs': ['F1', 'E2']}]
+    with pytest.raises(ValueError, match='support its specific discrepancy'):
+        validate(output)
+
+
+def test_needs_review_accepts_specific_finding_and_conclusion_comparison():
+    data = snapshot()
+    data['entries'][1]['text'] = 'Пульс не измеряли.'
+    output = comparison()
+    output['diagnosis_review'].update(status='needs_review', summary='Врач пишет, что пульс не измеряли, хотя в осмотре записан пульс 72 /min.')
+    output['discrepancies'] = [{'text': 'Отрицание измерения пульса противоречит записанному значению 72 /min.', 'refs': ['E1', 'E2']}]
+    assert patient_workspace_ai.validate_comparison(output, data, patient_workspace_ai.evidence_context(data)) is output

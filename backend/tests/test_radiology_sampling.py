@@ -72,7 +72,7 @@ def test_batch_request_sends_real_images_and_publishes_exact_coverage(client, ca
     assert len(captured) == 1  # One bounded model request, not four serial timeouts.
     content = captured[0]['messages'][1]['content']
     assert len([item for item in content if item['type'] == 'image_url']) == 3
-    assert 'Write all prose in English' in captured[0]['messages'][0]['content']
+    assert 'Write ALL generated explanatory prose in English' in captured[0]['messages'][0]['content']
     assert all(frame['image_quality']['input_size'] == [16, 16] for frame in coverage['frames'])
     schema = captured[0]['response_format']['schema']
     assert schema['properties']['frame_assessments']['minItems'] == schema['properties']['frame_assessments']['maxItems'] == 3
@@ -82,7 +82,7 @@ def test_batch_request_sends_real_images_and_publishes_exact_coverage(client, ca
     assert frame_schema['observations']['items']['maxLength'] == 180
 
 
-@pytest.mark.parametrize('invalid', ['missing_frame', 'unseen_comparison', 'unreadable_finding', 'unreadable_comparison'])
+@pytest.mark.parametrize('invalid', ['missing_frame', 'unseen_comparison', 'unreadable_finding', 'unreadable_comparison', 'comparison_without_observation'])
 def test_batch_rejects_unsupported_frame_claims(client, case, monkeypatch, invalid):
     study, body = upload_study(client, case)
     output = sample_output()
@@ -91,6 +91,8 @@ def test_batch_rejects_unsupported_frame_claims(client, case, monkeypatch, inval
         output['frame_assessments'].pop()
     elif invalid == 'unseen_comparison':
         output['report_comparison']['frame_refs'] = ['F4']
+    elif invalid == 'comparison_without_observation':
+        output['frame_assessments'][0]['observations'] = []
     else:
         output['frame_assessments'][0]['quality'] = 'unreadable'
         if invalid == 'unreadable_comparison':

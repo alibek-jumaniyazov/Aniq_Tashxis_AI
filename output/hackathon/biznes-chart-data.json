@@ -1,0 +1,90 @@
+{
+  "created_on": "2026-09-19",
+  "currency": "UZS",
+  "status": "illustrative planning assumptions; not customers, traction, actual costs, profit or financial forecast",
+  "scenarios": [
+    {
+      "name": "Boshlang‘ich",
+      "counts": [
+        20,
+        3,
+        1
+      ],
+      "solo_mrr_uzs": 3000000,
+      "clinic10_mrr_uzs": 4170000,
+      "clinic25_mrr_uzs": 2390000,
+      "mrr_uzs": 9560000,
+      "paid_accounts": 24,
+      "seat_capacity": 75
+    },
+    {
+      "name": "O‘sish",
+      "counts": [
+        100,
+        20,
+        10
+      ],
+      "solo_mrr_uzs": 15000000,
+      "clinic10_mrr_uzs": 27800000,
+      "clinic25_mrr_uzs": 23900000,
+      "mrr_uzs": 66700000,
+      "paid_accounts": 130,
+      "seat_capacity": 550
+    },
+    {
+      "name": "Kengayish",
+      "counts": [
+        300,
+        60,
+        30
+      ],
+      "solo_mrr_uzs": 45000000,
+      "clinic10_mrr_uzs": 83400000,
+      "clinic25_mrr_uzs": 71700000,
+      "mrr_uzs": 200100000,
+      "paid_accounts": 390,
+      "seat_capacity": 1650
+    }
+  ],
+  "sensitivity": [
+    {
+      "inference_cost_per_review_uzs": 200,
+      "ai_cost_uzs": 2640000,
+      "total_modeled_cost_uzs": 31607000,
+      "modeled_residual_uzs": 35093000,
+      "residual_percent": 52.61
+    },
+    {
+      "inference_cost_per_review_uzs": 500,
+      "ai_cost_uzs": 6600000,
+      "total_modeled_cost_uzs": 35567000,
+      "modeled_residual_uzs": 31133000,
+      "residual_percent": 46.68
+    },
+    {
+      "inference_cost_per_review_uzs": 1500,
+      "ai_cost_uzs": 19800000,
+      "total_modeled_cost_uzs": 48767000,
+      "modeled_residual_uzs": 17933000,
+      "residual_percent": 26.89
+    },
+    {
+      "inference_cost_per_review_uzs": 3500,
+      "ai_cost_uzs": 46200000,
+      "total_modeled_cost_uzs": 75167000,
+      "modeled_residual_uzs": -8467000,
+      "residual_percent": -12.69
+    }
+  ],
+  "assumptions": {
+    "active_seat_share": 0.6,
+    "seats": 550,
+    "active_doctors": 330,
+    "reviews_per_active_doctor_month": 40,
+    "reviews_month": 13200,
+    "storage_support_per_active_doctor_uzs": 10000,
+    "payment_cost_fraction": 0.01,
+    "fixed_monthly_operating_cost_uzs": 25000000
+  },
+  "break_even_inference_cost_per_review_uzs": 2858.560606060606
+}

@@ -4,14 +4,34 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import AiAnalysisPanel from './AiAnalysisPanel'
 import type { Run } from './types'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
-afterEach(cleanup)
+const locale = vi.hoisted(() => ({ language: 'ru' }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: locale.language, language: locale.language } }) }))
+afterEach(() => { cleanup(); locale.language = 'ru' })
 
 function analysis(overrides: Partial<Run> = {}): Run {
   return { id: 'run-1', run_id: 'run-1', case_id: 'case-1', case_version: 2, mode: 'current', status: 'succeeded', stage: 'complete', is_stale: false, created_at: '2026-09-18T12:00:00Z', error_code: null, result: { ai: { summary: 'Confirmed observation only.', limitations: ['Review against source.'], missing_fields: [] } }, ...overrides }
 }
 
 describe('AI result trust and actions', () => {
+  it('hides another-language clinical prose and offers regeneration in the interface language', () => {
+    locale.language = 'uz'
+    const retry = vi.fn()
+    render(<AiAnalysisPanel run={analysis({ language: 'ru' })} onRetry={retry}/>)
+    expect(screen.queryByText('Confirmed observation only.')).toBeNull()
+    expect(screen.queryByText('Review against source.')).toBeNull()
+    expect(screen.getByText('aiLanguageMismatch')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'aiRegenerateLanguage' }))
+    expect(retry).toHaveBeenCalledOnce()
+  })
+
+  it('labels illustrative seed analysis without presenting it as MedGemma inference', () => {
+    const run = analysis()
+    run.result.provenance = 'synthetic_seed'
+    render(<AiAnalysisPanel run={run}/>)
+    expect(screen.getByText('aiSyntheticResultHint')).toBeTruthy()
+    expect(screen.getByTestId('ai-analysis-panel').textContent).not.toContain('MEDGEMMA')
+  })
+
   it.each(['running', 'cancelled', 'failed'])('never presents leftover model text as the result of a %s run', status => {
     render(<AiAnalysisPanel run={analysis({ status })}/> )
     expect(screen.queryByText('Confirmed observation only.')).toBeNull()
