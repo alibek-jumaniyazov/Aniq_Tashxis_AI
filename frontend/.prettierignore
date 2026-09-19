@@ -1,0 +1,10 @@
+node_modules/
+dist/
+src/api/generated.ts
+package-lock.json
+test-results/
+seed-test-results/
+seed-rerun-results/
+playwright-report/
+*.tsbuildinfo
+public/

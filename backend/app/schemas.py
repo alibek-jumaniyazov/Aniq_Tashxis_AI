@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class StrictModel(BaseModel):
-    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
 class Login(StrictModel):
@@ -16,7 +16,17 @@ class UserResponse(StrictModel):
     id: str
     name: str
     email: str
-    role: Literal['doctor', 'radiologist', 'expert', 'quality', 'sender', 'admin', 'analyst', 'owner', 'developer']
+    role: Literal[
+        "doctor",
+        "radiologist",
+        "expert",
+        "quality",
+        "sender",
+        "admin",
+        "analyst",
+        "owner",
+        "developer",
+    ]
     tenant_id: str
     is_clinic_owner: bool = False
 
@@ -29,37 +39,37 @@ class AuthResponse(StrictModel):
 class CaseCreate(StrictModel):
     full_name: str = Field(min_length=1, max_length=200)
     age: int | None = Field(default=None, strict=True, ge=0, le=120)
-    sex: Literal['female', 'male', 'unknown'] = 'unknown'
-    patient_phone: str = Field(default='', max_length=50)
-    summary: str = Field(default='', max_length=6000)
+    sex: Literal["female", "male", "unknown"] = "unknown"
+    patient_phone: str = Field(default="", max_length=50)
+    summary: str = Field(default="", max_length=6000)
 
 
 class FactInput(StrictModel):
-    key: str = Field(min_length=1, max_length=100, pattern=r'^[a-z][a-z0-9_.]*$')
+    key: str = Field(min_length=1, max_length=100, pattern=r"^[a-z][a-z0-9_.]*$")
     label: str = Field(min_length=1, max_length=200)
     value: str | float | None = None
     unit: str | None = Field(default=None, max_length=40)
-    assertion: Literal['present', 'absent', 'unknown', 'not_documented'] = 'present'
-    provenance: Literal['manual', 'patient_reported', 'paper', 'document', 'dmed_demo'] = 'manual'
+    assertion: Literal["present", "absent", "unknown", "not_documented"] = "present"
+    provenance: Literal["manual", "patient_reported", "paper", "document", "dmed_demo"] = "manual"
     event_time: datetime | None = None
     available_time: datetime | None = None
     source_id: str | None = None
     span: str | None = Field(default=None, max_length=1000)
     confirmed: bool = False
-    order_status: Literal['active', 'cancelled', 'not_applicable'] = 'not_applicable'
+    order_status: Literal["active", "cancelled", "not_applicable"] = "not_applicable"
 
-    @field_validator('event_time', 'available_time')
+    @field_validator("event_time", "available_time")
     @classmethod
     def timezone_required(cls, value):
         if value is not None and value.tzinfo is None:
-            raise ValueError('Timezone is required; use an explicit UTC offset.')
+            raise ValueError("Timezone is required; use an explicit UTC offset.")
         return value
 
-    @field_validator('value')
+    @field_validator("value")
     @classmethod
     def limit_value(cls, value):
         if isinstance(value, str) and len(value) > 6000:
-            raise ValueError('Value too long')
+            raise ValueError("Value too long")
         return value
 
 
@@ -77,11 +87,11 @@ class ConfirmFacts(StrictModel):
 class NoteCreate(StrictModel):
     expected_version: int = Field(ge=1)
     text: str = Field(min_length=3, max_length=6000)
-    note_type: Literal['history', 'decision_rationale', 'alert_response'] = 'history'
-    provenance: Literal['manual', 'patient_reported', 'paper'] = 'manual'
+    note_type: Literal["history", "decision_rationale", "alert_response"] = "history"
+    provenance: Literal["manual", "patient_reported", "paper"] = "manual"
     event_time: datetime | None = None
 
-    @field_validator('event_time')
+    @field_validator("event_time")
     @classmethod
     def tz(cls, value):
         return FactInput.timezone_required(value)
@@ -89,13 +99,13 @@ class NoteCreate(StrictModel):
 
 class AnalysisCreate(StrictModel):
     expected_version: int = Field(ge=1)
-    mode: Literal['current', 'decision_time'] = 'current'
+    mode: Literal["current", "decision_time"] = "current"
     decision_time: datetime | None = None
     include_ai: bool = True
-    review_focus: Literal['documentation', 'clinical_assessment'] = 'documentation'
-    language: Literal['ru', 'uz', 'en'] = 'ru'
+    review_focus: Literal["documentation", "clinical_assessment"] = "documentation"
+    language: Literal["ru", "uz", "en"] = "ru"
 
-    @field_validator('decision_time')
+    @field_validator("decision_time")
     @classmethod
     def tz(cls, value):
         return FactInput.timezone_required(value)
@@ -103,33 +113,35 @@ class AnalysisCreate(StrictModel):
 
 class AnalysisRetry(StrictModel):
     expected_version: int = Field(ge=1)
-    language: Literal['ru', 'uz', 'en'] | None = None
+    language: Literal["ru", "uz", "en"] | None = None
 
 
 class NoteDraft(StrictModel):
-    text: str = Field(default='', max_length=6000)
-    note_type: Literal['history', 'decision_rationale', 'alert_response'] = 'history'
-    provenance: Literal['manual', 'patient_reported', 'paper'] = 'manual'
-    event_time: str = Field(default='', max_length=30)
+    text: str = Field(default="", max_length=6000)
+    note_type: Literal["history", "decision_rationale", "alert_response"] = "history"
+    provenance: Literal["manual", "patient_reported", "paper"] = "manual"
+    event_time: str = Field(default="", max_length=30)
 
 
 class ReviewCreate(StrictModel):
-    status: Literal['seen', 'accepted', 'rejected', 'information_requested', 'closed']
-    comment: str = Field(default='', max_length=3000)
+    status: Literal["seen", "accepted", "rejected", "information_requested", "closed"]
+    comment: str = Field(default="", max_length=3000)
 
 
 class ImportCreate(StrictModel):
     expected_version: int = Field(ge=1)
     connection_id: str
-    scenario: Literal['success', 'denied', 'disconnected', 'updated', 'identity_mismatch'] = 'success'
-    external_id: str = 'DEMO-001'
+    scenario: Literal["success", "denied", "disconnected", "updated", "identity_mismatch"] = (
+        "success"
+    )
+    external_id: str = "DEMO-001"
 
 
 class RiskInputs(StrictModel):
     systolic_pressure: float | None = Field(default=None, gt=0, le=400, allow_inf_nan=False)
     total_cholesterol: float | None = Field(default=None, gt=0, le=1000, allow_inf_nan=False)
     hdl_cholesterol: float | None = Field(default=None, gt=0, le=500, allow_inf_nan=False)
-    lipid_unit: Literal['mg/dL', 'mmol/L'] = 'mg/dL'
+    lipid_unit: Literal["mg/dL", "mmol/L"] = "mg/dL"
     smoker: bool | None = None
     diabetes: bool | None = None
     bp_treated: bool | None = None
@@ -139,7 +151,7 @@ class RiskInputs(StrictModel):
 
 class ForecastCreate(StrictModel):
     expected_version: int = Field(ge=1)
-    outcome_id: str = 'cardiovascular_event'
+    outcome_id: str = "cardiovascular_event"
     horizon_years: int = Field(ge=1, le=10)
     inputs: RiskInputs | None = None
 
@@ -150,7 +162,14 @@ class IncidentCreate(StrictModel):
 
 
 class IncidentDecision(StrictModel):
-    status: Literal['awaiting_explanation', 'confirmed', 'not_confirmed', 'insufficient_information', 'corrective_actions', 'closed']
+    status: Literal[
+        "awaiting_explanation",
+        "confirmed",
+        "not_confirmed",
+        "insufficient_information",
+        "corrective_actions",
+        "closed",
+    ]
     explanation: str = Field(min_length=5, max_length=4000)
     expected_version: int = Field(ge=1)
 
@@ -159,7 +178,7 @@ class ExportCreate(StrictModel):
     incident_ids: list[str] = Field(min_length=1, max_length=100)
     purpose: str = Field(min_length=3, max_length=500)
     basis: str = Field(min_length=3, max_length=500)
-    recipient: Literal['mock-ministry'] = 'mock-ministry'
+    recipient: Literal["mock-ministry"] = "mock-ministry"
 
 
 class VersionBody(StrictModel):
@@ -168,18 +187,18 @@ class VersionBody(StrictModel):
 
 class CaseUpdate(StrictModel):
     expected_version: int = Field(ge=1)
-    full_name: str = Field(default='', min_length=1, max_length=200)
+    full_name: str = Field(default="", min_length=1, max_length=200)
     age: int | None = Field(default=None, strict=True, ge=0, le=120)
-    sex: Literal['female', 'male', 'unknown'] = 'unknown'
-    patient_phone: str = Field(default='', max_length=50)
-    summary: str = Field(default='', max_length=6000)
-    diagnosis: str = Field(default='', max_length=2000)
+    sex: Literal["female", "male", "unknown"] = "unknown"
+    patient_phone: str = Field(default="", max_length=50)
+    summary: str = Field(default="", max_length=6000)
+    diagnosis: str = Field(default="", max_length=2000)
 
 
 class ClinicalConclusion(StrictModel):
     expected_version: int = Field(ge=1)
     diagnosis: str = Field(min_length=3, max_length=2000)
-    status: Literal['provisional', 'confirmed']
+    status: Literal["provisional", "confirmed"]
     rationale: str = Field(min_length=5, max_length=4000)
     fact_ids: list[str] = Field(min_length=1, max_length=100)
     run_id: str | None = None
@@ -187,7 +206,7 @@ class ClinicalConclusion(StrictModel):
 
 
 class ImagingReview(StrictModel):
-    status: Literal['confirmed', 'rejected', 'clarified']
+    status: Literal["confirmed", "rejected", "clarified"]
     comment: str = Field(min_length=3, max_length=3000)
 
 
@@ -208,11 +227,22 @@ class AIResult(StrictModel):
 
 
 class ExtractedFact(StrictModel):
-    key: Literal['symptom.complaint', 'vital.spo2', 'vital.pulse', 'vital.systolic_pressure', 'allergy.substance', 'medication.substance', 'lab.potassium', 'lab.total_cholesterol', 'imaging.side', 'smoking.status']
+    key: Literal[
+        "symptom.complaint",
+        "vital.spo2",
+        "vital.pulse",
+        "vital.systolic_pressure",
+        "allergy.substance",
+        "medication.substance",
+        "lab.potassium",
+        "lab.total_cholesterol",
+        "imaging.side",
+        "smoking.status",
+    ]
     label: str = Field(min_length=1, max_length=200)
     value: str = Field(min_length=1, max_length=500)
     unit: str | None = Field(default=None, max_length=40)
-    assertion: Literal['present', 'absent', 'unknown', 'not_documented']
+    assertion: Literal["present", "absent", "unknown", "not_documented"]
     page: int = Field(ge=1)
     quote: str = Field(min_length=1, max_length=1000)
 
@@ -229,7 +259,7 @@ class DiagnosticHypothesis(StrictModel):
 
 
 class ClinicalAssessment(StrictModel):
-    status: Literal['insufficient_data', 'requires_clinician_review']
+    status: Literal["insufficient_data", "requires_clinician_review"]
     differential: list[DiagnosticHypothesis] = Field(max_length=3)
     questions: list[str] = Field(max_length=5)
 

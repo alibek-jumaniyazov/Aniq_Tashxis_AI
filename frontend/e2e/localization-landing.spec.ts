@@ -1,16 +1,45 @@
 import { test, expect } from '@playwright/test'
 
 const languages = [
-  { code: 'ru', option: 'Русский', hero: 'В центре —', evidence: 'Доказательства', caption: 'Рассмотрите доказательства за выводом.', question: 'AniqTashxis ставит диагноз вместо врача?', choose: 'Выбрать тариф', menu: 'Открыть меню' },
-  { code: 'uz', option: 'O‘zbekcha', hero: 'Diqqatingiz', evidence: 'Dalillar', caption: 'Xulosa ortidagi dalilni ko‘ring.', question: 'AniqTashxis shifokor o‘rniga tashxis qo‘yadimi?', choose: 'Tarifni tanlash', menu: 'Menyuni ochish' },
-  { code: 'en', option: 'English', hero: 'Focus on', evidence: 'Evidence', caption: 'See the evidence behind the conclusion.', question: 'Does AniqTashxis diagnose instead of a doctor?', choose: 'Choose plan', menu: 'Open menu' },
+  {
+    code: 'ru',
+    option: 'Русский',
+    hero: 'В центре —',
+    evidence: 'Доказательства',
+    caption: 'Рассмотрите доказательства за выводом.',
+    question: 'AniqTashxis ставит диагноз вместо врача?',
+    choose: 'Выбрать тариф',
+    menu: 'Открыть меню',
+  },
+  {
+    code: 'uz',
+    option: 'O‘zbekcha',
+    hero: 'Diqqatingiz',
+    evidence: 'Dalillar',
+    caption: 'Xulosa ortidagi dalilni ko‘ring.',
+    question: 'AniqTashxis shifokor o‘rniga tashxis qo‘yadimi?',
+    choose: 'Tarifni tanlash',
+    menu: 'Menyuni ochish',
+  },
+  {
+    code: 'en',
+    option: 'English',
+    hero: 'Focus on',
+    evidence: 'Evidence',
+    caption: 'See the evidence behind the conclusion.',
+    question: 'Does AniqTashxis diagnose instead of a doctor?',
+    choose: 'Choose plan',
+    menu: 'Open menu',
+  },
 ]
 
 for (const [index, language] of languages.entries()) {
-  test(`landing ${language.code}: translated interactions, mobile layout and persisted language`, async ({ page }) => {
+  test(`landing ${language.code}: translated interactions, mobile layout and persisted language`, async ({
+    page,
+  }) => {
     const errors: string[] = []
-    page.on('pageerror', error => errors.push(error.message))
-    await page.addInitScript(code => {
+    page.on('pageerror', (error) => errors.push(error.message))
+    await page.addInitScript((code) => {
       if (!localStorage.getItem('aniq-language')) localStorage.setItem('aniq-language', code)
     }, language.code)
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -18,7 +47,10 @@ for (const [index, language] of languages.entries()) {
     await page.goto('/')
     await expect(page.locator('html')).toHaveAttribute('lang', language.code)
     await expect(page.locator('h1')).toContainText(language.hero)
-    await page.locator('.lcv-view-controls').getByRole('button', { name: language.evidence, exact: true }).click()
+    await page
+      .locator('.lcv-view-controls')
+      .getByRole('button', { name: language.evidence, exact: true })
+      .click()
     await expect(page.locator('.lcv-caption h3')).toHaveText(language.caption)
     const faq = page.locator('#savollar details').first()
     await expect(faq.locator('summary')).toContainText(language.question)
@@ -34,7 +66,9 @@ for (const [index, language] of languages.entries()) {
     const mobileBounds = await page.evaluate(() => {
       const width = innerWidth
       const selectors = ['.lx-header .lp-brand', '.lx-header-actions .language', '.lx-menu-toggle']
-      const rects = selectors.map(selector => document.querySelector(selector)!.getBoundingClientRect())
+      const rects = selectors.map((selector) =>
+        document.querySelector(selector)!.getBoundingClientRect(),
+      )
       const heading = document.querySelector('h1')!
       const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT)
       let node: Node | null
@@ -42,11 +76,25 @@ for (const [index, language] of languages.entries()) {
       while ((node = walker.nextNode())) {
         const range = document.createRange()
         range.selectNodeContents(node)
-        textFits.push(...Array.from(range.getClientRects()).map(rect => rect.left >= -1 && rect.right <= width + 1))
+        textFits.push(
+          ...Array.from(range.getClientRects()).map(
+            (rect) => rect.left >= -1 && rect.right <= width + 1,
+          ),
+        )
       }
-      return { pageFits: document.documentElement.scrollWidth <= width + 1, headerFits: rects.every(rect => rect.left >= 0 && rect.right <= width), headerDoesNotOverlap: rects[0].right <= rects[1].left && rects[1].right <= rects[2].left, headingFits: textFits.every(Boolean) }
+      return {
+        pageFits: document.documentElement.scrollWidth <= width + 1,
+        headerFits: rects.every((rect) => rect.left >= 0 && rect.right <= width),
+        headerDoesNotOverlap: rects[0].right <= rects[1].left && rects[1].right <= rects[2].left,
+        headingFits: textFits.every(Boolean),
+      }
     })
-    expect(mobileBounds).toEqual({ pageFits: true, headerFits: true, headerDoesNotOverlap: true, headingFits: true })
+    expect(mobileBounds).toEqual({
+      pageFits: true,
+      headerFits: true,
+      headerDoesNotOverlap: true,
+      headingFits: true,
+    })
     await page.getByRole('button', { name: language.menu, exact: true }).click()
     await expect(page.locator('.lx-mobile-options')).toBeVisible()
     await page.keyboard.press('Escape')
@@ -63,7 +111,11 @@ for (const [index, language] of languages.entries()) {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('lang', next.code)
     await expect(page.locator('h1')).toContainText(next.hero)
-    await page.locator('#tariflar').getByRole('link', { name: next.choose, exact: true }).first().click()
+    await page
+      .locator('#tariflar')
+      .getByRole('link', { name: next.choose, exact: true })
+      .first()
+      .click()
     await expect(page).toHaveURL(/checkout\?plan=solo/)
     await expect(page.locator('html')).toHaveAttribute('lang', next.code)
     expect(errors).toEqual([])

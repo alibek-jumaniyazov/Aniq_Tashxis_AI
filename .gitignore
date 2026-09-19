@@ -12,6 +12,9 @@ dist/
 test-results/
 seed-test-results/
 playwright-report/
+seed-rerun-results/
+*.tsbuildinfo
+.chart-data-*/
 *.pyc
 *.db
 *.db-*

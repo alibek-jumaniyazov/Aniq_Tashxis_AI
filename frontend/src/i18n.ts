@@ -14,7 +14,11 @@ import { errorRu, errorUz, errorEn } from './errorTranslations'
 import { baseEn } from './baseEnglish'
 import { patientRu, patientUz, patientEn } from './patientTranslations'
 import { patientNavRu, patientNavUz, patientNavEn } from './patientNavigationTranslations'
-import { patientWorkspaceRu, patientWorkspaceUz, patientWorkspaceEn } from './patientWorkspaceTranslations'
+import {
+  patientWorkspaceRu,
+  patientWorkspaceUz,
+  patientWorkspaceEn,
+} from './patientWorkspaceTranslations'
 import { settingsRu, settingsUz, settingsEn } from './settingsTranslations'
 import { analysisLocaleRu, analysisLocaleUz, analysisLocaleEn } from './analysisLocaleTranslations'
 import { aiProviderRu, aiProviderUz, aiProviderEn } from './aiProviderTranslations'
@@ -23,15 +27,73 @@ import { supportedLanguages, normalizeLanguage, type LanguageCode } from './loca
 export { supportedLanguages, normalizeLanguage, type LanguageCode } from './localeCodes'
 
 export const translations = {
-  ru: { ...workflowRu, ...notificationRu, ...workspaceRu, ...aiAnalysisRu, ...workflowPolishRu, ...baseRu, ...interfaceRu, ...clinicalLocaleRu, ...commerceRu, ...landingRu, ...errorRu, ...patientRu, ...patientNavRu, ...patientWorkspaceRu, ...settingsRu, ...analysisLocaleRu, ...aiProviderRu },
-  uz: { ...workflowUz, ...notificationUz, ...workspaceUz, ...aiAnalysisUz, ...workflowPolishUz, ...baseUz, ...interfaceUz, ...clinicalLocaleUz, ...commerceUz, ...landingUz, ...errorUz, ...patientUz, ...patientNavUz, ...patientWorkspaceUz, ...settingsUz, ...analysisLocaleUz, ...aiProviderUz },
-  en: { ...workflowEn, ...notificationEn, ...workspaceEn, ...aiAnalysisEn, ...workflowPolishEn, ...baseEn, ...interfaceEn, ...clinicalLocaleEn, ...commerceEn, ...landingEn, ...errorEn, ...patientEn, ...patientNavEn, ...patientWorkspaceEn, ...settingsEn, ...analysisLocaleEn, ...aiProviderEn },
+  ru: {
+    ...workflowRu,
+    ...notificationRu,
+    ...workspaceRu,
+    ...aiAnalysisRu,
+    ...workflowPolishRu,
+    ...baseRu,
+    ...interfaceRu,
+    ...clinicalLocaleRu,
+    ...commerceRu,
+    ...landingRu,
+    ...errorRu,
+    ...patientRu,
+    ...patientNavRu,
+    ...patientWorkspaceRu,
+    ...settingsRu,
+    ...analysisLocaleRu,
+    ...aiProviderRu,
+  },
+  uz: {
+    ...workflowUz,
+    ...notificationUz,
+    ...workspaceUz,
+    ...aiAnalysisUz,
+    ...workflowPolishUz,
+    ...baseUz,
+    ...interfaceUz,
+    ...clinicalLocaleUz,
+    ...commerceUz,
+    ...landingUz,
+    ...errorUz,
+    ...patientUz,
+    ...patientNavUz,
+    ...patientWorkspaceUz,
+    ...settingsUz,
+    ...analysisLocaleUz,
+    ...aiProviderUz,
+  },
+  en: {
+    ...workflowEn,
+    ...notificationEn,
+    ...workspaceEn,
+    ...aiAnalysisEn,
+    ...workflowPolishEn,
+    ...baseEn,
+    ...interfaceEn,
+    ...clinicalLocaleEn,
+    ...commerceEn,
+    ...landingEn,
+    ...errorEn,
+    ...patientEn,
+    ...patientNavEn,
+    ...patientWorkspaceEn,
+    ...settingsEn,
+    ...analysisLocaleEn,
+    ...aiProviderEn,
+  },
 }
 function storedLanguage() {
   const requested = new URLSearchParams(window.location.search).get('lang')
-  if (window.location.pathname === '/' && supportedLanguages.includes(requested as LanguageCode)) return requested as LanguageCode
-  try { return normalizeLanguage(localStorage.getItem('aniq-language')) }
-  catch { return 'ru' }
+  if (window.location.pathname === '/' && supportedLanguages.includes(requested as LanguageCode))
+    return requested as LanguageCode
+  try {
+    return normalizeLanguage(localStorage.getItem('aniq-language'))
+  } catch {
+    return 'ru'
+  }
 }
 function applyLanguage(value: string) {
   const language = normalizeLanguage(value)
@@ -42,12 +104,22 @@ function applyLanguage(value: string) {
     else url.searchParams.set('lang', language)
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
   }
-  try { localStorage.setItem('aniq-language', language) } catch { /* Storage may be unavailable in private mode. */ }
+  try {
+    localStorage.setItem('aniq-language', language)
+  } catch {
+    /* Storage may be unavailable in private mode. */
+  }
 }
 i18n.on('languageChanged', applyLanguage)
 void i18n.use(initReactI18next).init({
-  resources: Object.fromEntries(supportedLanguages.map(language => [language, { translation: translations[language] }])),
-  lng: storedLanguage(), supportedLngs: [...supportedLanguages], load: 'languageOnly', fallbackLng: 'ru',
-  interpolation: { escapeValue: false }, returnEmptyString: false,
+  resources: Object.fromEntries(
+    supportedLanguages.map((language) => [language, { translation: translations[language] }]),
+  ),
+  lng: storedLanguage(),
+  supportedLngs: [...supportedLanguages],
+  load: 'languageOnly',
+  fallbackLng: 'ru',
+  interpolation: { escapeValue: false },
+  returnEmptyString: false,
 })
 export default i18n

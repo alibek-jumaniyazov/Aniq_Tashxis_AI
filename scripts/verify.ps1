@@ -5,8 +5,14 @@ Set-Location $projectRoot
 if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed' }
 & '.venv\Scripts\python.exe' -m ruff check --config backend/pyproject.toml backend scripts
 if ($LASTEXITCODE -ne 0) { throw 'Python lint failed' }
+& '.venv\Scripts\python.exe' -m ruff format --check --config backend/pyproject.toml backend scripts
+if ($LASTEXITCODE -ne 0) { throw 'Python formatting check failed' }
+& '.venv\Scripts\python.exe' scripts/export_openapi.py --check
+if ($LASTEXITCODE -ne 0) { throw 'OpenAPI contract is out of date' }
 Push-Location frontend
 try {
+    npm.cmd run format:check
+    if ($LASTEXITCODE -ne 0) { throw 'Frontend formatting check failed' }
     npm.cmd run lint
     if ($LASTEXITCODE -ne 0) { throw 'Frontend lint failed' }
     npm.cmd test

@@ -121,6 +121,12 @@ AI tahlili tasdiqlangan faktlar, shifokor konteksti va tekshiruv qamrovini oladi
 
 ## Ishlab chiqish
 
+Ekspert tekshiruvi uchun boshlanish nuqtasi: [kod refaktori va tekshiruv dalillari](docs/CODE_REVIEW_UZ.md), [arxitektura](docs/ARCHITECTURE.md) va [ishlab chiqish qoidalari](CONTRIBUTING.md). Formatter, lint, API shartnomasi, test va build tekshiruvlarini bitta buyruq bajaradi:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/verify.ps1
+```
+
 Ikki terminal:
 
 ```powershell
@@ -137,9 +143,10 @@ Vite: `http://127.0.0.1:5173`. Axios so‘rovlari `/api/v1` orqali Vite proxyga 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest backend/tests -q
 .\.venv\Scripts\python.exe -m ruff check --config backend/pyproject.toml backend scripts
-.\.venv\Scripts\python.exe scripts/export_openapi.py
+.\.venv\Scripts\python.exe -m ruff format --check --config backend/pyproject.toml backend scripts
+.\.venv\Scripts\python.exe scripts/export_openapi.py --check
 cd frontend
-npm.cmd run api:types
+npm.cmd run format:check
 npm.cmd run lint
 npm.cmd test
 npm.cmd run build
@@ -147,6 +154,8 @@ npm.cmd run test:e2e
 ```
 
 Playwright Windowsda o‘rnatilgan Chrome’dan foydalanadi. E2E serverlari 8001 / 5174 portlarida, alohida `runtime/e2e.db` bazasida ishlaydi. CI Linuxda Chromium o‘rnatadi. CI konfiguratsiyasi kiritilgan, lekin GitHubga push va masofaviy CI run bu sessiyada bajarilmagan.
+
+API ataylab o‘zgartirilsa, ildiz papkada `scripts/export_openapi.py`, keyin frontendda `npm.cmd run api:types` bajariladi. Oddiy tekshiruvda `--check` saqlangan shartnomani qayta yozmasdan solishtiradi. Formatlash va tekshiruv joriy bemor bazasini reset qilmaydi.
 
 ## Ma’lumotlar bazasi va Docker
 

@@ -5,6 +5,8 @@ import './interfacePreferences.css'
 
 export default function InterfacePreferencesProvider({ children }: PropsWithChildren) {
   const { reduceMotion } = useInterfacePreferences()
-  useEffect(() => { document.documentElement.dataset.reduceMotion = String(reduceMotion) }, [reduceMotion])
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = String(reduceMotion)
+  }, [reduceMotion])
   return <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>{children}</MotionConfig>
 }

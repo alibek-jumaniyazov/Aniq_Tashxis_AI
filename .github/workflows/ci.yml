@@ -17,7 +17,9 @@ jobs:
       - run: .venv/bin/pip install -r backend/requirements.lock.txt
       - run: .venv/bin/python -m pytest backend/tests -q
       - run: .venv/bin/python -m ruff check --config backend/pyproject.toml backend scripts
-      - run: npm ci && npm run lint && npm test && npm run build
+      - run: .venv/bin/python -m ruff format --check --config backend/pyproject.toml backend scripts
+      - run: .venv/bin/python scripts/export_openapi.py --check
+      - run: npm ci && npm run format:check && npm run lint && npm test && npm run build
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend

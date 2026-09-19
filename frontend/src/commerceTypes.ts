@@ -65,39 +65,88 @@ export interface BillingAccount {
   requests: PaymentRequest[]
 }
 
-export interface PlanCatalog { items: BillingPlan[]; support_telegram: string; demo_mode: boolean }
+export interface PlanCatalog {
+  items: BillingPlan[]
+  support_telegram: string
+  demo_mode: boolean
+}
 export const SUPPORT_URL = 'https://t.me/avilab_uz_support'
 export function formatUzs(value: number, language = i18next.language) {
-  return new Intl.NumberFormat(language?.startsWith('uz') ? 'uz-UZ' : language?.startsWith('en') ? 'en-US' : 'ru-RU').format(value)
+  return new Intl.NumberFormat(
+    language?.startsWith('uz') ? 'uz-UZ' : language?.startsWith('en') ? 'en-US' : 'ru-RU',
+  ).format(value)
 }
 
 export function formatMoney(value: number | null | undefined, language = i18next.language) {
-  return value == null ? i18next.t('commerceCustomQuote', { lng: language }) : `${formatUzs(value, language)} ${i18next.t('commerceCurrency', { lng: language })}`
+  return value == null
+    ? i18next.t('commerceCustomQuote', { lng: language })
+    : `${formatUzs(value, language)} ${i18next.t('commerceCurrency', { lng: language })}`
 }
 
-const defaultPlans: Record<string, { name: string; description: string; nameKey: string; descriptionKey: string }> = {
-  solo: { name: 'Doctor', description: 'Bir shifokor uchun shaxsiy ish maydoni.', nameKey: 'commercePlanDoctor', descriptionKey: 'commercePlanDoctorDescription' },
-  clinic10: { name: 'Clinic 10', description: '10 shifokorgacha klinika jamoasi uchun.', nameKey: 'commercePlanClinic10', descriptionKey: 'commercePlanClinic10Description' },
-  clinic25: { name: 'Clinic 25', description: '25 shifokorgacha klinika jamoasi uchun.', nameKey: 'commercePlanClinic25', descriptionKey: 'commercePlanClinic25Description' },
-  custom: { name: 'Individual', description: 'Katta klinikalar uchun individual shartlar.', nameKey: 'commercePlanCustom', descriptionKey: 'commercePlanCustomDescription' },
+const defaultPlans: Record<
+  string,
+  { name: string; description: string; nameKey: string; descriptionKey: string }
+> = {
+  solo: {
+    name: 'Doctor',
+    description: 'Bir shifokor uchun shaxsiy ish maydoni.',
+    nameKey: 'commercePlanDoctor',
+    descriptionKey: 'commercePlanDoctorDescription',
+  },
+  clinic10: {
+    name: 'Clinic 10',
+    description: '10 shifokorgacha klinika jamoasi uchun.',
+    nameKey: 'commercePlanClinic10',
+    descriptionKey: 'commercePlanClinic10Description',
+  },
+  clinic25: {
+    name: 'Clinic 25',
+    description: '25 shifokorgacha klinika jamoasi uchun.',
+    nameKey: 'commercePlanClinic25',
+    descriptionKey: 'commercePlanClinic25Description',
+  },
+  custom: {
+    name: 'Individual',
+    description: 'Katta klinikalar uchun individual shartlar.',
+    nameKey: 'commercePlanCustom',
+    descriptionKey: 'commercePlanCustomDescription',
+  },
 }
 
 /** Translate only shipped defaults; administrator-authored catalog text remains intact. */
-export function localizedPlan(plan: Pick<BillingPlan, 'id' | 'name' | 'description'>, language = i18next.language) {
+export function localizedPlan(
+  plan: Pick<BillingPlan, 'id' | 'name' | 'description'>,
+  language = i18next.language,
+) {
   const defaults = defaultPlans[plan.id]
   return {
-    name: defaults && plan.name === defaults.name ? i18next.t(defaults.nameKey, { lng: language }) : plan.name,
-    description: defaults && plan.description === defaults.description ? i18next.t(defaults.descriptionKey, { lng: language }) : plan.description,
+    name:
+      defaults && plan.name === defaults.name
+        ? i18next.t(defaults.nameKey, { lng: language })
+        : plan.name,
+    description:
+      defaults && plan.description === defaults.description
+        ? i18next.t(defaults.descriptionKey, { lng: language })
+        : plan.description,
   }
 }
 
-export function localizedPlanName(name: string | null | undefined, id?: string | null, language = i18next.language, internalDemo = false) {
-  if (internalDemo && name === 'Ichki namoyish') return i18next.t('commerceInternalDemo', { lng: language })
+export function localizedPlanName(
+  name: string | null | undefined,
+  id?: string | null,
+  language = i18next.language,
+  internalDemo = false,
+) {
+  if (internalDemo && name === 'Ichki namoyish')
+    return i18next.t('commerceInternalDemo', { lng: language })
   if (!name) return ''
   return id ? localizedPlan({ id, name, description: '' }, language).name : name
 }
 
-const defaultPaymentInstructions = 'Tanlangan tarif summasini o‘tkazing va to‘lov chekini yuklang. Obuna tekshiruvdan keyin faollashadi.'
+const defaultPaymentInstructions =
+  'Tanlangan tarif summasini o‘tkazing va to‘lov chekini yuklang. Obuna tekshiruvdan keyin faollashadi.'
 export function localizedPaymentInstructions(instructions: string, language = i18next.language) {
-  return instructions === defaultPaymentInstructions ? i18next.t('commerceDefaultPaymentInstructions', { lng: language }) : instructions
+  return instructions === defaultPaymentInstructions
+    ? i18next.t('commerceDefaultPaymentInstructions', { lng: language })
+    : instructions
 }

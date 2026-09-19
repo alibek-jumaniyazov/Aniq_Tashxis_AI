@@ -16,5 +16,45 @@ import App from './App'
 import LocaleProvider from './LocaleProvider'
 import Seo from './Seo'
 
-export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false }, mutations: { retry: false } } })
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={queryClient}><LocaleProvider theme={{ token: { colorPrimary: '#087f83', colorInfo: '#087f83', colorText: '#152936', colorTextSecondary: '#6c808a', fontFamily: 'Manrope, sans-serif', borderRadius: 10, controlHeight: 42, colorBorder: '#dce6e8', fontSize: 13 }, components: { Button: { primaryShadow: '0 4px 12px #087f831c' }, Table: { headerBg: '#f8fafb', cellPaddingBlock: 18 }, Tabs: { horizontalItemGutter: 28 }, Modal: { borderRadiusLG: 20 } } }}><AntApp><InterfacePreferencesProvider><BrowserRouter><Seo/><App/></BrowserRouter></InterfacePreferencesProvider></AntApp></LocaleProvider></QueryClientProvider></React.StrictMode>)
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false, staleTime: 5000, refetchOnWindowFocus: false },
+    mutations: { retry: false },
+  },
+})
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <LocaleProvider
+        theme={{
+          token: {
+            colorPrimary: '#087f83',
+            colorInfo: '#087f83',
+            colorText: '#152936',
+            colorTextSecondary: '#6c808a',
+            fontFamily: 'Manrope, sans-serif',
+            borderRadius: 10,
+            controlHeight: 42,
+            colorBorder: '#dce6e8',
+            fontSize: 13,
+          },
+          components: {
+            Button: { primaryShadow: '0 4px 12px #087f831c' },
+            Table: { headerBg: '#f8fafb', cellPaddingBlock: 18 },
+            Tabs: { horizontalItemGutter: 28 },
+            Modal: { borderRadiusLG: 20 },
+          },
+        }}
+      >
+        <AntApp>
+          <InterfacePreferencesProvider>
+            <BrowserRouter>
+              <Seo />
+              <App />
+            </BrowserRouter>
+          </InterfacePreferencesProvider>
+        </AntApp>
+      </LocaleProvider>
+    </QueryClientProvider>
+  </React.StrictMode>,
+)

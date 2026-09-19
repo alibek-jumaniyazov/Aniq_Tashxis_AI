@@ -1,2 +1,32 @@
-html[data-reduce-motion="true"] *,html[data-reduce-motion="true"] *::before,html[data-reduce-motion="true"] *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition:none!important;scroll-behavior:auto!important}
-.sidebar-user-controls{display:flex;align-items:center;gap:6px;border-top:1px solid #e4ecee;margin-top:22px;padding-top:16px}.sidebar-user-controls .user-profile{border:0;margin:0;padding:0;min-width:0;flex:1}.sidebar-user-controls .user-profile>div{min-width:0}.sidebar-user-controls .user-profile strong{overflow-wrap:anywhere}.sidebar-user-controls>.ant-btn{flex:none}
+html[data-reduce-motion='true'] *,
+html[data-reduce-motion='true'] *::before,
+html[data-reduce-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+.sidebar-user-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid #e4ecee;
+  margin-top: 22px;
+  padding-top: 16px;
+}
+.sidebar-user-controls .user-profile {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  flex: 1;
+}
+.sidebar-user-controls .user-profile > div {
+  min-width: 0;
+}
+.sidebar-user-controls .user-profile strong {
+  overflow-wrap: anywhere;
+}
+.sidebar-user-controls > .ant-btn {
+  flex: none;
+}

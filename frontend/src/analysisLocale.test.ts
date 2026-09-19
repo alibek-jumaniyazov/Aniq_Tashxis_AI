@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { analysisLanguage, analysisOriginKey, localizedHistoryRuns, localizedRun, syntheticAnalysis } from './analysisLocale'
+import {
+  analysisLanguage,
+  analysisOriginKey,
+  localizedHistoryRuns,
+  localizedRun,
+  syntheticAnalysis,
+} from './analysisLocale'
 
 describe('Saved AI report language and origin', () => {
   const ru = { id: 'ru', language: 'ru', result: {} }
@@ -35,8 +41,12 @@ describe('Saved AI report language and origin', () => {
   it('does not confuse prepared seed examples with local model output', () => {
     expect(syntheticAnalysis({ ...uz, result: { provenance: 'synthetic_seed' } })).toBe(true)
     expect(syntheticAnalysis({ ...uz, result: { provenance: 'local_medgemma' } })).toBe(false)
-    expect(analysisOriginKey({ ...uz, include_ai: false, result: { provenance: 'local_medgemma' } })).toBe('aiLocalResult')
+    expect(
+      analysisOriginKey({ ...uz, include_ai: false, result: { provenance: 'local_medgemma' } }),
+    ).toBe('aiLocalResult')
     expect(analysisOriginKey({ ...uz, include_ai: false, result: {} })).toBe('aiRuleResult')
-    expect(analysisOriginKey({ ...uz, include_ai: true, result: { provenance: 'synthetic_seed' } })).toBe('aiSyntheticResult')
+    expect(
+      analysisOriginKey({ ...uz, include_ai: true, result: { provenance: 'synthetic_seed' } }),
+    ).toBe('aiSyntheticResult')
   })
 })

@@ -1,8 +1,442 @@
-.radiology-workbench{min-width:0}.radiology-main{padding:24px}.radiology-work-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,1fr);gap:20px;align-items:start}.radiology-work-grid>*{min-width:0}.radiology-workbench .dicom-viewer{margin:0;border:1px solid #28414e;border-radius:16px;background:#071722;box-shadow:0 15px 38px #102e3814}.radiology-workbench .dicom-toolbar{padding:14px;border-bottom:1px solid #253a46}.radiology-workbench .dicom-toolbar>.ant-select{flex:1 1 130px;max-width:100%;min-width:0}.radiology-workbench .window-controls{margin:0;padding:14px;gap:10px;border-bottom:1px solid #253a46}.radiology-workbench .dicom-image{height:clamp(320px,52vh,620px);background:radial-gradient(ellipse at center,#13232d,#050e16 75%);touch-action:none;user-select:none}.radiology-workbench .dicom-image.panning{cursor:grab}.radiology-workbench .dicom-image.panning:active{cursor:grabbing}.radiology-workbench .dicom-image:focus-visible{outline:2px solid #50cfca;outline-offset:-3px}.radiology-workbench .image-plane{will-change:transform}.radiology-workbench .dicom-corner{pointer-events:none;padding:5px 8px;border-radius:5px;background:#06111cbd;color:#bdcfda;font-size:11px;z-index:1}.radiology-workbench .dicom-controls{border-top:1px solid #253a46;padding:12px 16px;gap:24px}.radiology-workbench .dicom-controls>label{font-size:11px}.radiology-workbench .dicom-viewer>.ant-space{padding:0 14px;gap:8px!important}.rw-viewer-help{padding:14px;color:#92adb8;font-size:11px;line-height:1.8}.radiology-workbench .dicom-viewer>.workflow-help,.radiology-workbench .measurement-controls{padding:0 14px 14px}.radiology-workbench .measurement-controls .ant-space{padding:0;width:100%}.radiology-workbench .dicom-empty{min-height:420px;color:#61a9ad}.radiology-workbench .dicom-empty h3{color:#d8eeee}.radiology-workbench .dicom-empty p{color:#91b0bb;font-size:12px}.radiology-workbench .dicom-viewer:fullscreen .dicom-image{height:calc(100vh - 310px)}.rw-report-editor{padding:20px;background:#f5f9fa;border:1px solid #dae8ea;border-radius:16px}.rw-report-heading{display:flex;align-items:center;gap:12px;color:#087f83}.rw-report-heading>div{min-width:0}.rw-report-heading span{font-size:9px;letter-spacing:1.1px;text-transform:uppercase;color:#698b95;font-weight:700}.rw-report-heading h3{font-size:17px;margin-top:4px;color:#173b49;line-height:1.45}.rw-report-help{font-size:11px;line-height:1.8;color:#69818c;margin:14px 0}.rw-field-label{display:block;font-size:12px;font-weight:700;color:#42606e;margin:18px 0 8px}.rw-upload-report{margin-top:10px}.rw-report-editor textarea{font-size:12px;line-height:1.8}.rw-source-quote,.rw-report-history,.rw-evaluated-report{margin-top:18px;border-top:1px solid #dce6e9;padding-top:14px}.rw-source-quote summary,.rw-report-history summary,.rw-evaluated-report summary{font-size:12px;color:#32727a;cursor:pointer;line-height:1.6;font-weight:600}.rw-source-quote p,.rw-evaluated-report p{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow:auto;line-height:1.8;margin:12px 0}.rw-report-history article{border-top:1px solid #dce6e9;margin-top:12px;padding-top:14px}.rw-report-history strong{font-size:12px;display:block}.rw-report-history small{font-size:10px;color:#80949a}.rw-report-history p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.8;max-height:180px;overflow:auto;margin:10px 0}.rw-comparison{margin:20px 0;border:1px solid #b9dcda;border-radius:14px;background:linear-gradient(125deg,#edf8f5,#f8fcfc);padding:24px}.rw-comparison--possible_discrepancy{border-color:#e5c58e;background:linear-gradient(125deg,#fff8e9,#fffdf9)}.rw-comparison--not_assessable{border-color:#cedee7;background:#f3f8fb}.rw-comparison-heading{display:flex;align-items:center;gap:12px;color:#087f83}.rw-comparison-heading span{font-size:10px;font-weight:600;letter-spacing:.3px}.rw-comparison h3{font-size:19px;line-height:1.4;color:#153f47;margin-top:5px}.rw-comparison p,.rw-comparison li{font-size:13px;line-height:1.85;color:#3d5863;white-space:pre-wrap;overflow-wrap:anywhere}.rw-comparison p{margin-top:16px}.rw-comparison h4{font-size:12px;margin-top:18px}.rw-comparison ul{padding-left:20px}.rw-comparison small{display:block;padding-top:13px;border-top:1px solid #cee2e3;font-size:11px;line-height:1.8;color:#5f7a87}.rw-upload-help{font-size:13px;line-height:1.8;margin:16px 0}.radiology-workbench--standalone .section-title h2{font-size:20px}.radiology-workbench--standalone .section-title p{font-size:12px}
-@media(max-width:1150px){.radiology-work-grid{grid-template-columns:minmax(0,1fr)}.rw-report-editor{padding:20px}.rw-report-editor textarea{min-height:150px}.radiology-workbench .dicom-image{height:460px}}
-@media(max-width:640px){.radiology-main{padding:14px}.radiology-main>.section-title{align-items:flex-start;flex-direction:column}.radiology-work-grid{gap:14px}.radiology-workbench .dicom-image{height:330px}.radiology-workbench .dicom-corner{font-size:9px}.radiology-workbench .window-controls{padding:10px;gap:8px}.radiology-workbench .window-controls .ant-input-number{width:88px}.radiology-workbench .window-controls .ant-btn{font-size:10px}.radiology-workbench .dicom-controls{gap:15px}.rw-report-editor{padding:15px}.rw-comparison{padding:17px}.rw-comparison h3{font-size:16px}.rw-viewer-help{font-size:10px}.rw-report-editor .ant-btn{white-space:normal;height:auto;min-height:34px;line-height:1.6;padding:6px 10px}}
+.radiology-workbench {
+  min-width: 0;
+}
+.radiology-main {
+  padding: 24px;
+}
+.radiology-work-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(270px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.radiology-work-grid > * {
+  min-width: 0;
+}
+.radiology-workbench .dicom-viewer {
+  margin: 0;
+  border: 1px solid #28414e;
+  border-radius: 16px;
+  background: #071722;
+  box-shadow: 0 15px 38px #102e3814;
+}
+.radiology-workbench .dicom-toolbar {
+  padding: 14px;
+  border-bottom: 1px solid #253a46;
+}
+.radiology-workbench .dicom-toolbar > .ant-select {
+  flex: 1 1 130px;
+  max-width: 100%;
+  min-width: 0;
+}
+.radiology-workbench .window-controls {
+  margin: 0;
+  padding: 14px;
+  gap: 10px;
+  border-bottom: 1px solid #253a46;
+}
+.radiology-workbench .dicom-image {
+  height: clamp(320px, 52vh, 620px);
+  background: radial-gradient(ellipse at center, #13232d, #050e16 75%);
+  touch-action: none;
+  user-select: none;
+}
+.radiology-workbench .dicom-image.panning {
+  cursor: grab;
+}
+.radiology-workbench .dicom-image.panning:active {
+  cursor: grabbing;
+}
+.radiology-workbench .dicom-image:focus-visible {
+  outline: 2px solid #50cfca;
+  outline-offset: -3px;
+}
+.radiology-workbench .image-plane {
+  will-change: transform;
+}
+.radiology-workbench .dicom-corner {
+  pointer-events: none;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #06111cbd;
+  color: #bdcfda;
+  font-size: 11px;
+  z-index: 1;
+}
+.radiology-workbench .dicom-controls {
+  border-top: 1px solid #253a46;
+  padding: 12px 16px;
+  gap: 24px;
+}
+.radiology-workbench .dicom-controls > label {
+  font-size: 11px;
+}
+.radiology-workbench .dicom-viewer > .ant-space {
+  padding: 0 14px;
+  gap: 8px !important;
+}
+.rw-viewer-help {
+  padding: 14px;
+  color: #92adb8;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.radiology-workbench .dicom-viewer > .workflow-help,
+.radiology-workbench .measurement-controls {
+  padding: 0 14px 14px;
+}
+.radiology-workbench .measurement-controls .ant-space {
+  padding: 0;
+  width: 100%;
+}
+.radiology-workbench .dicom-empty {
+  min-height: 420px;
+  color: #61a9ad;
+}
+.radiology-workbench .dicom-empty h3 {
+  color: #d8eeee;
+}
+.radiology-workbench .dicom-empty p {
+  color: #91b0bb;
+  font-size: 12px;
+}
+.radiology-workbench .dicom-viewer:fullscreen .dicom-image {
+  height: calc(100vh - 310px);
+}
+.rw-report-editor {
+  padding: 20px;
+  background: #f5f9fa;
+  border: 1px solid #dae8ea;
+  border-radius: 16px;
+}
+.rw-report-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #087f83;
+}
+.rw-report-heading > div {
+  min-width: 0;
+}
+.rw-report-heading span {
+  font-size: 9px;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #698b95;
+  font-weight: 700;
+}
+.rw-report-heading h3 {
+  font-size: 17px;
+  margin-top: 4px;
+  color: #173b49;
+  line-height: 1.45;
+}
+.rw-report-help {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #69818c;
+  margin: 14px 0;
+}
+.rw-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #42606e;
+  margin: 18px 0 8px;
+}
+.rw-upload-report {
+  margin-top: 10px;
+}
+.rw-report-editor textarea {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.rw-source-quote,
+.rw-report-history,
+.rw-evaluated-report {
+  margin-top: 18px;
+  border-top: 1px solid #dce6e9;
+  padding-top: 14px;
+}
+.rw-source-quote summary,
+.rw-report-history summary,
+.rw-evaluated-report summary {
+  font-size: 12px;
+  color: #32727a;
+  cursor: pointer;
+  line-height: 1.6;
+  font-weight: 600;
+}
+.rw-source-quote p,
+.rw-evaluated-report p {
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 250px;
+  overflow: auto;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.rw-report-history article {
+  border-top: 1px solid #dce6e9;
+  margin-top: 12px;
+  padding-top: 14px;
+}
+.rw-report-history strong {
+  font-size: 12px;
+  display: block;
+}
+.rw-report-history small {
+  font-size: 10px;
+  color: #80949a;
+}
+.rw-report-history p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.8;
+  max-height: 180px;
+  overflow: auto;
+  margin: 10px 0;
+}
+.rw-comparison {
+  margin: 20px 0;
+  border: 1px solid #b9dcda;
+  border-radius: 14px;
+  background: linear-gradient(125deg, #edf8f5, #f8fcfc);
+  padding: 24px;
+}
+.rw-comparison--possible_discrepancy {
+  border-color: #e5c58e;
+  background: linear-gradient(125deg, #fff8e9, #fffdf9);
+}
+.rw-comparison--not_assessable {
+  border-color: #cedee7;
+  background: #f3f8fb;
+}
+.rw-comparison-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #087f83;
+}
+.rw-comparison-heading span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.rw-comparison h3 {
+  font-size: 19px;
+  line-height: 1.4;
+  color: #153f47;
+  margin-top: 5px;
+}
+.rw-comparison p,
+.rw-comparison li {
+  font-size: 13px;
+  line-height: 1.85;
+  color: #3d5863;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rw-comparison p {
+  margin-top: 16px;
+}
+.rw-comparison h4 {
+  font-size: 12px;
+  margin-top: 18px;
+}
+.rw-comparison ul {
+  padding-left: 20px;
+}
+.rw-comparison small {
+  display: block;
+  padding-top: 13px;
+  border-top: 1px solid #cee2e3;
+  font-size: 11px;
+  line-height: 1.8;
+  color: #5f7a87;
+}
+.rw-upload-help {
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 16px 0;
+}
+.radiology-workbench--standalone .section-title h2 {
+  font-size: 20px;
+}
+.radiology-workbench--standalone .section-title p {
+  font-size: 12px;
+}
+@media (max-width: 1150px) {
+  .radiology-work-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rw-report-editor {
+    padding: 20px;
+  }
+  .rw-report-editor textarea {
+    min-height: 150px;
+  }
+  .radiology-workbench .dicom-image {
+    height: 460px;
+  }
+}
+@media (max-width: 640px) {
+  .radiology-main {
+    padding: 14px;
+  }
+  .radiology-main > .section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .radiology-work-grid {
+    gap: 14px;
+  }
+  .radiology-workbench .dicom-image {
+    height: 330px;
+  }
+  .radiology-workbench .dicom-corner {
+    font-size: 9px;
+  }
+  .radiology-workbench .window-controls {
+    padding: 10px;
+    gap: 8px;
+  }
+  .radiology-workbench .window-controls .ant-input-number {
+    width: 88px;
+  }
+  .radiology-workbench .window-controls .ant-btn {
+    font-size: 10px;
+  }
+  .radiology-workbench .dicom-controls {
+    gap: 15px;
+  }
+  .rw-report-editor {
+    padding: 15px;
+  }
+  .rw-comparison {
+    padding: 17px;
+  }
+  .rw-comparison h3 {
+    font-size: 16px;
+  }
+  .rw-viewer-help {
+    font-size: 10px;
+  }
+  .rw-report-editor .ant-btn {
+    white-space: normal;
+    height: auto;
+    min-height: 34px;
+    line-height: 1.6;
+    padding: 6px 10px;
+  }
+}
 
-.radiology-work-grid.is-empty{grid-template-columns:minmax(0,1fr)}
+.radiology-work-grid.is-empty {
+  grid-template-columns: minmax(0, 1fr);
+}
 
-.rw-scope-controls{display:grid;grid-template-columns:minmax(140px,220px) minmax(180px,340px);align-items:center;gap:12px;margin:18px 0}.rw-scope-controls>label{font-size:13px;font-weight:600}.rw-scope-controls>p{grid-column:1/-1;color:#577280;font-size:13px;line-height:1.7;margin:0}.rw-coverage{padding:22px;border:1px solid #a5d6d2;border-radius:16px;background:#f3faf8;margin:20px 0}.rw-coverage>header{display:flex;align-items:center;gap:12px;color:#087f83}.rw-coverage h3{margin:0;font-size:17px}.rw-coverage header p{margin:5px 0 0;color:#335563;font-size:13px}.rw-coverage-note{font-size:12px;line-height:1.7;color:#5c7782;margin:14px 0}.rw-frame-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.rw-frame-result{padding:17px;border:1px solid #d4e7e4;border-radius:12px;background:white;min-width:0}.rw-frame-heading{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between}.rw-frame-location{display:block;font-size:12px;margin:8px 0;color:#56717b}.rw-frame-result ul{padding-left:18px;margin:12px 0}.rw-frame-result li,.rw-frame-result p{font-size:13px;line-height:1.75;overflow-wrap:anywhere;white-space:pre-wrap}.rw-frame-result small,.rw-frame-limit{font-size:11px;color:#697e89}.rw-frame-result--unreadable{border-color:#ebc6c2}
-@media(max-width:640px){.rw-scope-controls{grid-template-columns:minmax(0,1fr)}.rw-frame-results{grid-template-columns:minmax(0,1fr)}.rw-coverage{padding:15px}.rw-frame-result{padding:14px}}
+.rw-scope-controls {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(180px, 340px);
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+.rw-scope-controls > label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.rw-scope-controls > p {
+  grid-column: 1/-1;
+  color: #577280;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.rw-coverage {
+  padding: 22px;
+  border: 1px solid #a5d6d2;
+  border-radius: 16px;
+  background: #f3faf8;
+  margin: 20px 0;
+}
+.rw-coverage > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #087f83;
+}
+.rw-coverage h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.rw-coverage header p {
+  margin: 5px 0 0;
+  color: #335563;
+  font-size: 13px;
+}
+.rw-coverage-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #5c7782;
+  margin: 14px 0;
+}
+.rw-frame-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.rw-frame-result {
+  padding: 17px;
+  border: 1px solid #d4e7e4;
+  border-radius: 12px;
+  background: white;
+  min-width: 0;
+}
+.rw-frame-heading {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.rw-frame-location {
+  display: block;
+  font-size: 12px;
+  margin: 8px 0;
+  color: #56717b;
+}
+.rw-frame-result ul {
+  padding-left: 18px;
+  margin: 12px 0;
+}
+.rw-frame-result li,
+.rw-frame-result p {
+  font-size: 13px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.rw-frame-result small,
+.rw-frame-limit {
+  font-size: 11px;
+  color: #697e89;
+}
+.rw-frame-result--unreadable {
+  border-color: #ebc6c2;
+}
+@media (max-width: 640px) {
+  .rw-scope-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rw-frame-results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rw-coverage {
+    padding: 15px;
+  }
+  .rw-frame-result {
+    padding: 14px;
+  }
+}

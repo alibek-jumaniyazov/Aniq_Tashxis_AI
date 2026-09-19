@@ -9,7 +9,9 @@ describe('API errors', () => {
   })
   it('preserves structured server error code', () => {
     const err = new AxiosError('conflict')
-    Object.assign(err, { response: { data: { error: { code: 'UNRECOGNIZED_CONFLICT', message: 'Refresh case' } } } })
+    Object.assign(err, {
+      response: { data: { error: { code: 'UNRECOGNIZED_CONFLICT', message: 'Refresh case' } } },
+    })
     expect(errorText(err)).toBe(`${i18n.t('requestFailed')} (UNRECOGNIZED_CONFLICT)`)
   })
 })

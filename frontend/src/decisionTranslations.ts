@@ -1,10 +1,84 @@
 export const decisionRu = {
-  decisionEvidence: 'Проверка решения по источникам', decisionScope: 'Проверка согласованности записей с сохранённым набором фактов и временем решения.', evaluatedFacts: 'Учтено фактов', excludedFacts: 'Исключено фактов', attention: 'Требует проверки', checked: 'Проверено', not_evaluable: 'Недостаточно данных', substance_overlap: 'Аллергия и действующее назначение', substance_overlapHint: 'Сравниваются точные названия веществ. Синонимы, торговые названия и перекрёстная реактивность не выводятся автоматически.', laterality_consistency: 'Сторона в документах', laterality_consistencyHint: 'Сопоставляются записи о стороне. Разные стороны могут относиться к разным областям: проверьте источники.', observation_consistency: 'Противоречащие наблюдения', observation_consistencyHint: 'Разные значения одного показателя с одинаковым временем требуют уточнения. Изменение показателя во времени само по себе не ошибка.', measurement_units: 'Единицы измерения', measurement_unitsHint: 'Лабораторные показатели и измерения должны иметь явные единицы. Клинические пороги этим тестом не оцениваются.', confirmation_completeness: 'Подтверждение исходных фактов', confirmation_completenessHint: 'Неподтверждённые записи не включаются в выводы. Откройте источник и подтвердите либо исправьте запись.', decisionNotDiagnosis: 'Проверки выявляют несогласованность документации. Отсутствие замечаний не доказывает правильность диагноза или безопасность лечения.', noRunAlerts: 'В выбранной проверке замечаний не сформировано.',
+  decisionEvidence: 'Проверка решения по источникам',
+  decisionScope:
+    'Проверка согласованности записей с сохранённым набором фактов и временем решения.',
+  evaluatedFacts: 'Учтено фактов',
+  excludedFacts: 'Исключено фактов',
+  attention: 'Требует проверки',
+  checked: 'Проверено',
+  not_evaluable: 'Недостаточно данных',
+  substance_overlap: 'Аллергия и действующее назначение',
+  substance_overlapHint:
+    'Сравниваются точные названия веществ. Синонимы, торговые названия и перекрёстная реактивность не выводятся автоматически.',
+  laterality_consistency: 'Сторона в документах',
+  laterality_consistencyHint:
+    'Сопоставляются записи о стороне. Разные стороны могут относиться к разным областям: проверьте источники.',
+  observation_consistency: 'Противоречащие наблюдения',
+  observation_consistencyHint:
+    'Разные значения одного показателя с одинаковым временем требуют уточнения. Изменение показателя во времени само по себе не ошибка.',
+  measurement_units: 'Единицы измерения',
+  measurement_unitsHint:
+    'Лабораторные показатели и измерения должны иметь явные единицы. Клинические пороги этим тестом не оцениваются.',
+  confirmation_completeness: 'Подтверждение исходных фактов',
+  confirmation_completenessHint:
+    'Неподтверждённые записи не включаются в выводы. Откройте источник и подтвердите либо исправьте запись.',
+  decisionNotDiagnosis:
+    'Проверки выявляют несогласованность документации. Отсутствие замечаний не доказывает правильность диагноза или безопасность лечения.',
+  noRunAlerts: 'В выбранной проверке замечаний не сформировано.',
 }
 export const decisionUz: typeof decisionRu = {
-  decisionEvidence: 'Qarorni manbalar asosida tekshirish', decisionScope: 'Saqlangan faktlar va qaror vaqti bo‘yicha yozuvlar mosligini tekshirish.', evaluatedFacts: 'Hisobga olingan faktlar', excludedFacts: 'Chiqarib tashlangan faktlar', attention: 'Tekshirish kerak', checked: 'Tekshirildi', not_evaluable: 'Ma’lumot yetarli emas', substance_overlap: 'Allergiya va faol buyurilgan dori', substance_overlapHint: 'Moddalarning aniq nomlari solishtiriladi. Sinonimlar, savdo nomlari va kesishuvchi reaksiya avtomatik aniqlanmaydi.', laterality_consistency: 'Hujjatlardagi tomon', laterality_consistencyHint: 'Tomon haqidagi yozuvlar solishtiriladi. Turli tomonlar turli sohaga tegishli bo‘lishi mumkin: manbalarni tekshiring.', observation_consistency: 'Zid kuzatuvlar', observation_consistencyHint: 'Bir vaqtdagi bir ko‘rsatkichning turli qiymatlari aniqlashtiriladi. Vaqt o‘tishi bilan qiymat o‘zgarishi o‘zi xato emas.', measurement_units: 'O‘lchov birliklari', measurement_unitsHint: 'Laboratoriya va o‘lchov ko‘rsatkichlarida birlik aniq bo‘lishi kerak. Bu tekshiruv klinik chegaralarni baholamaydi.', confirmation_completeness: 'Asl faktlarni tasdiqlash', confirmation_completenessHint: 'Tasdiqlanmagan yozuvlar xulosaga kiritilmaydi. Manbani ochib, yozuvni tasdiqlang yoki tuzating.', decisionNotDiagnosis: 'Tekshiruvlar hujjatdagi nomuvofiqlikni ko‘rsatadi. E’tiroz yo‘qligi tashxis to‘g‘riligi yoki davolash xavfsizligini isbotlamaydi.', noRunAlerts: 'Tanlangan tekshiruvda e’tiroz aniqlanmagan.',
+  decisionEvidence: 'Qarorni manbalar asosida tekshirish',
+  decisionScope: 'Saqlangan faktlar va qaror vaqti bo‘yicha yozuvlar mosligini tekshirish.',
+  evaluatedFacts: 'Hisobga olingan faktlar',
+  excludedFacts: 'Chiqarib tashlangan faktlar',
+  attention: 'Tekshirish kerak',
+  checked: 'Tekshirildi',
+  not_evaluable: 'Ma’lumot yetarli emas',
+  substance_overlap: 'Allergiya va faol buyurilgan dori',
+  substance_overlapHint:
+    'Moddalarning aniq nomlari solishtiriladi. Sinonimlar, savdo nomlari va kesishuvchi reaksiya avtomatik aniqlanmaydi.',
+  laterality_consistency: 'Hujjatlardagi tomon',
+  laterality_consistencyHint:
+    'Tomon haqidagi yozuvlar solishtiriladi. Turli tomonlar turli sohaga tegishli bo‘lishi mumkin: manbalarni tekshiring.',
+  observation_consistency: 'Zid kuzatuvlar',
+  observation_consistencyHint:
+    'Bir vaqtdagi bir ko‘rsatkichning turli qiymatlari aniqlashtiriladi. Vaqt o‘tishi bilan qiymat o‘zgarishi o‘zi xato emas.',
+  measurement_units: 'O‘lchov birliklari',
+  measurement_unitsHint:
+    'Laboratoriya va o‘lchov ko‘rsatkichlarida birlik aniq bo‘lishi kerak. Bu tekshiruv klinik chegaralarni baholamaydi.',
+  confirmation_completeness: 'Asl faktlarni tasdiqlash',
+  confirmation_completenessHint:
+    'Tasdiqlanmagan yozuvlar xulosaga kiritilmaydi. Manbani ochib, yozuvni tasdiqlang yoki tuzating.',
+  decisionNotDiagnosis:
+    'Tekshiruvlar hujjatdagi nomuvofiqlikni ko‘rsatadi. E’tiroz yo‘qligi tashxis to‘g‘riligi yoki davolash xavfsizligini isbotlamaydi.',
+  noRunAlerts: 'Tanlangan tekshiruvda e’tiroz aniqlanmagan.',
 }
 
 export const decisionEn: typeof decisionRu = {
-  decisionEvidence: 'Source-based decision review', decisionScope: 'Check the consistency of records against the saved facts and the time of the decision.', evaluatedFacts: 'Facts considered', excludedFacts: 'Facts excluded', attention: 'Needs review', checked: 'Checked', not_evaluable: 'Insufficient data', substance_overlap: 'Allergy and active prescription', substance_overlapHint: 'Exact substance names are compared. Synonyms, brand names and cross-reactivity are not inferred automatically.', laterality_consistency: 'Laterality across documents', laterality_consistencyHint: 'Recorded sides are compared. Different sides may refer to different anatomical regions: check the sources.', observation_consistency: 'Conflicting observations', observation_consistencyHint: 'Different values for the same measurement at the same time need clarification. A change over time is not, by itself, an error.', measurement_units: 'Measurement units', measurement_unitsHint: 'Laboratory results and measurements must have explicit units. This check does not assess clinical thresholds.', confirmation_completeness: 'Confirmation of source facts', confirmation_completenessHint: 'Unconfirmed entries are excluded from conclusions. Open the source and confirm or correct the entry.', decisionNotDiagnosis: 'These checks identify inconsistencies in documentation. An absence of findings does not establish diagnostic accuracy or treatment safety.', noRunAlerts: 'No findings were generated by the selected review.',
+  decisionEvidence: 'Source-based decision review',
+  decisionScope:
+    'Check the consistency of records against the saved facts and the time of the decision.',
+  evaluatedFacts: 'Facts considered',
+  excludedFacts: 'Facts excluded',
+  attention: 'Needs review',
+  checked: 'Checked',
+  not_evaluable: 'Insufficient data',
+  substance_overlap: 'Allergy and active prescription',
+  substance_overlapHint:
+    'Exact substance names are compared. Synonyms, brand names and cross-reactivity are not inferred automatically.',
+  laterality_consistency: 'Laterality across documents',
+  laterality_consistencyHint:
+    'Recorded sides are compared. Different sides may refer to different anatomical regions: check the sources.',
+  observation_consistency: 'Conflicting observations',
+  observation_consistencyHint:
+    'Different values for the same measurement at the same time need clarification. A change over time is not, by itself, an error.',
+  measurement_units: 'Measurement units',
+  measurement_unitsHint:
+    'Laboratory results and measurements must have explicit units. This check does not assess clinical thresholds.',
+  confirmation_completeness: 'Confirmation of source facts',
+  confirmation_completenessHint:
+    'Unconfirmed entries are excluded from conclusions. Open the source and confirm or correct the entry.',
+  decisionNotDiagnosis:
+    'These checks identify inconsistencies in documentation. An absence of findings does not establish diagnostic accuracy or treatment safety.',
+  noRunAlerts: 'No findings were generated by the selected review.',
 }

@@ -11,7 +11,8 @@ export const notificationRu = {
   notificationsRecent: 'Последние события',
   notificationsLoadError: 'Не удалось обновить уведомления',
   notificationsEmptyHint: 'Здесь появятся обновления проверок по доступным вам случаям.',
-  notificationsLatestCount: 'Последние {{count}} из {{total}}. «Прочитать все» относится ко всем уведомлениям.',
+  notificationsLatestCount:
+    'Последние {{count}} из {{total}}. «Прочитать все» относится ко всем уведомлениям.',
   notificationsOpenHint: 'Нажмите на уведомление, чтобы открыть случай.',
 }
 
@@ -27,8 +28,10 @@ export const notificationUz = {
   notificationsClose: 'Bildirishnomalarni yopish',
   notificationsRecent: 'So‘nggi voqealar',
   notificationsLoadError: 'Bildirishnomalarni yangilab bo‘lmadi',
-  notificationsEmptyHint: 'Sizga ochiq holatlar bo‘yicha tekshiruv yangiliklari shu yerda ko‘rinadi.',
-  notificationsLatestCount: '{{total}} tadan oxirgi {{count}} tasi. «Hammasini o‘qish» barcha bildirishnomalarga tegishli.',
+  notificationsEmptyHint:
+    'Sizga ochiq holatlar bo‘yicha tekshiruv yangiliklari shu yerda ko‘rinadi.',
+  notificationsLatestCount:
+    '{{total}} tadan oxirgi {{count}} tasi. «Hammasini o‘qish» barcha bildirishnomalarga tegishli.',
   notificationsOpenHint: 'Holatni ochish uchun bildirishnomani bosing.',
 }
 
@@ -45,6 +48,7 @@ export const notificationEn: typeof notificationRu = {
   notificationsRecent: 'Recent activity',
   notificationsLoadError: 'Could not refresh notifications',
   notificationsEmptyHint: 'Updates on reviews of cases you can access will appear here.',
-  notificationsLatestCount: 'Latest {{count}} of {{total}}. “Read all” applies to all notifications.',
+  notificationsLatestCount:
+    'Latest {{count}} of {{total}}. “Read all” applies to all notifications.',
   notificationsOpenHint: 'Select a notification to open its case.',
 }

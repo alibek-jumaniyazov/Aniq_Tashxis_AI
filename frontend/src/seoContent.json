@@ -4,32 +4,89 @@
     "description": "Клиническое пространство для врачей и клиник: данные пациентов, проверка заключений с AI, просмотр DICOM КТ и МРТ, источники и история решений.",
     "heading": "Данные пациента и AI — в одном клиническом пространстве",
     "intro": "AniqTashxis.ai помогает врачам собирать клинические данные, проверять источники и сопоставлять своё заключение с AI-анализом.",
-    "features": ["Субъективные, объективные, лабораторные и инструментальные данные пациента.", "Ручной ввод и загрузка медицинских документов с проверкой извлечённых фактов.", "Просмотр поддерживаемых DICOM-серий КТ и МРТ, загрузка ZIP и анализ изображений.", "Сравнение заключения врача с AI, история решений и разграничение доступа по ролям."],
+    "features": [
+      "Субъективные, объективные, лабораторные и инструментальные данные пациента.",
+      "Ручной ввод и загрузка медицинских документов с проверкой извлечённых фактов.",
+      "Просмотр поддерживаемых DICOM-серий КТ и МРТ, загрузка ZIP и анализ изображений.",
+      "Сравнение заключения врача с AI, история решений и разграничение доступа по ролям."
+    ],
     "limitation": "Выбранные клинические тексты и изображения отправляются настроенному AI-сервису; облачную обработку выполняет внешний провайдер. Клиническая точность прототипа не валидирована; окончательное решение принимает врач. DMED работает в деморежиме.",
     "plans": "Подписки для одного врача и клиник. Актуальные тарифы и условия оплаты доступны в разделе «Тарифы».",
-    "open": "Войти в кабинет", "pricing": "Тарифы", "support": "Поддержка в Telegram", "private": "Защищённое рабочее пространство врача", "enableScript": "Для работы кабинета включите JavaScript.",
-    "routes": {"login": "Вход", "checkout": "Оформление подписки", "cases": "Пациенты", "expert": "Экспертная проверка", "reports": "Отчёты", "settings": "Настройки", "account": "Клиника и подписка", "developer": "Управление платформой", "workspace": "Рабочее пространство"}
+    "open": "Войти в кабинет",
+    "pricing": "Тарифы",
+    "support": "Поддержка в Telegram",
+    "private": "Защищённое рабочее пространство врача",
+    "enableScript": "Для работы кабинета включите JavaScript.",
+    "routes": {
+      "login": "Вход",
+      "checkout": "Оформление подписки",
+      "cases": "Пациенты",
+      "expert": "Экспертная проверка",
+      "reports": "Отчёты",
+      "settings": "Настройки",
+      "account": "Клиника и подписка",
+      "developer": "Управление платформой",
+      "workspace": "Рабочее пространство"
+    }
   },
   "uz": {
     "title": "AniqTashxis.ai — shifokor uchun AI yordamchi va DICOM ko‘rish",
     "description": "Shifokor va klinikalar uchun klinik ish maydoni: bemor ma’lumotlari, AI bilan xulosani tekshirish, KT va MRT DICOM tasvirlarini ko‘rish hamda manbalar.",
     "heading": "Bemor ma’lumotlari va AI — yagona klinik ish maydonida",
     "intro": "AniqTashxis.ai shifokorga klinik ma’lumotlarni jamlash, manbalarni tekshirish va o‘z xulosasini AI tahlili bilan solishtirishga yordam beradi.",
-    "features": ["Bemorning subyektiv, obyektiv, laborator va instrumental ma’lumotlari.", "Qo‘lda kiritish va tibbiy hujjatlarni yuklash, ajratilgan faktlarni tekshirish.", "Qo‘llab-quvvatlanadigan KT va MRT DICOM seriyalarini ko‘rish, ZIP yuklash va tasvir tahlili.", "Shifokor xulosasini AI bilan solishtirish, qarorlar tarixi va rollar bo‘yicha kirish."],
+    "features": [
+      "Bemorning subyektiv, obyektiv, laborator va instrumental ma’lumotlari.",
+      "Qo‘lda kiritish va tibbiy hujjatlarni yuklash, ajratilgan faktlarni tekshirish.",
+      "Qo‘llab-quvvatlanadigan KT va MRT DICOM seriyalarini ko‘rish, ZIP yuklash va tasvir tahlili.",
+      "Shifokor xulosasini AI bilan solishtirish, qarorlar tarixi va rollar bo‘yicha kirish."
+    ],
     "limitation": "Tanlangan klinik matn va tasvirlar sozlangan AI xizmatiga yuboriladi; bulutli qayta ishlash tashqi provayderda bajariladi. Prototipning klinik aniqligi validatsiyadan o‘tmagan; yakuniy qaror shifokorda. DMED hozircha demo rejimida.",
     "plans": "Bir shifokor va klinikalar uchun obunalar. Amaldagi tariflar hamda to‘lov shartlari «Tariflar» bo‘limida.",
-    "open": "Kabinetga kirish", "pricing": "Tariflar", "support": "Telegram orqali yordam", "private": "Shifokorning himoyalangan ish maydoni", "enableScript": "Kabinetdan foydalanish uchun JavaScript’ni yoqing.",
-    "routes": {"login": "Kirish", "checkout": "Obunani rasmiylashtirish", "cases": "Bemorlar", "expert": "Ekspert tekshiruvi", "reports": "Hisobotlar", "settings": "Sozlamalar", "account": "Klinika va obuna", "developer": "Platformani boshqarish", "workspace": "Ish maydoni"}
+    "open": "Kabinetga kirish",
+    "pricing": "Tariflar",
+    "support": "Telegram orqali yordam",
+    "private": "Shifokorning himoyalangan ish maydoni",
+    "enableScript": "Kabinetdan foydalanish uchun JavaScript’ni yoqing.",
+    "routes": {
+      "login": "Kirish",
+      "checkout": "Obunani rasmiylashtirish",
+      "cases": "Bemorlar",
+      "expert": "Ekspert tekshiruvi",
+      "reports": "Hisobotlar",
+      "settings": "Sozlamalar",
+      "account": "Klinika va obuna",
+      "developer": "Platformani boshqarish",
+      "workspace": "Ish maydoni"
+    }
   },
   "en": {
     "title": "AniqTashxis.ai — Clinical AI Assistant and DICOM Viewer",
     "description": "A workspace for doctors and clinics: patient records, AI clinical review, CT and MRI DICOM viewing, traceable evidence and decisions.",
     "heading": "Patient data and AI in one clinical workspace",
     "intro": "AniqTashxis.ai helps doctors collect clinical data, verify sources and compare their assessment with an AI review.",
-    "features": ["Subjective, objective, laboratory and instrumental patient data.", "Manual entry and medical document uploads with verification of extracted facts.", "Supported CT and MRI DICOM series, ZIP uploads and image review.", "Compare a doctor's assessment with AI, track decisions and manage role-based access."],
+    "features": [
+      "Subjective, objective, laboratory and instrumental patient data.",
+      "Manual entry and medical document uploads with verification of extracted facts.",
+      "Supported CT and MRI DICOM series, ZIP uploads and image review.",
+      "Compare a doctor's assessment with AI, track decisions and manage role-based access."
+    ],
     "limitation": "Selected clinical text and images are sent to the configured AI service; cloud processing is performed by an external provider. The prototype has not been clinically validated; the physician makes the final decision. DMED currently uses demo data.",
     "plans": "Subscriptions for individual doctors and clinics. Current plans and payment terms are available in Pricing.",
-    "open": "Sign in", "pricing": "Pricing", "support": "Telegram support", "private": "Secure clinical workspace", "enableScript": "Enable JavaScript to use the workspace.",
-    "routes": {"login": "Sign in", "checkout": "Subscribe", "cases": "Patients", "expert": "Expert review", "reports": "Reports", "settings": "Settings", "account": "Clinic and subscription", "developer": "Platform management", "workspace": "Workspace"}
+    "open": "Sign in",
+    "pricing": "Pricing",
+    "support": "Telegram support",
+    "private": "Secure clinical workspace",
+    "enableScript": "Enable JavaScript to use the workspace.",
+    "routes": {
+      "login": "Sign in",
+      "checkout": "Subscribe",
+      "cases": "Patients",
+      "expert": "Expert review",
+      "reports": "Reports",
+      "settings": "Settings",
+      "account": "Clinic and subscription",
+      "developer": "Platform management",
+      "workspace": "Workspace"
+    }
   }
 }

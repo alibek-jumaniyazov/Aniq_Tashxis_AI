@@ -1,14 +1,76 @@
-.workflow-form .ant-form-item-extra{font-size:12px;line-height:1.65;color:#526b74;margin-top:5px}
-.workflow-form .ant-form-item-label>label{height:auto;line-height:1.5}
-.workflow-help{font-size:13px;line-height:1.65;color:#526b74;margin:12px 0}
-.workflow-state{margin:12px 0!important}
-.workflow-review-form{border-top:1px solid #e2eeeb;padding-top:20px;margin-top:20px}
-.workflow-drawer .ant-drawer-body{overflow-wrap:anywhere}
-.workflow-downloads{display:flex;flex-wrap:wrap;gap:10px}
-.workflow-image-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(5,20,30,.78);color:#d9f7f0;font-size:14px;pointer-events:none;z-index:3}
-.workflow-image-loading svg{animation:workflow-spin 1.3s linear infinite}
-.workflow-risk-summary{padding:12px 0}
-.workflow-form .ant-input-number{width:100%}
-@keyframes workflow-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.workflow-image-loading svg{animation:none}}
-@media(max-width:600px){.workflow-form .risk-input-grid{grid-template-columns:1fr}.workflow-downloads>.ant-btn{flex:1;min-width:100px}.workflow-form .ant-form-item{margin-bottom:20px}}
+.workflow-form .ant-form-item-extra {
+  font-size: 12px;
+  line-height: 1.65;
+  color: #526b74;
+  margin-top: 5px;
+}
+.workflow-form .ant-form-item-label > label {
+  height: auto;
+  line-height: 1.5;
+}
+.workflow-help {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #526b74;
+  margin: 12px 0;
+}
+.workflow-state {
+  margin: 12px 0 !important;
+}
+.workflow-review-form {
+  border-top: 1px solid #e2eeeb;
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.workflow-drawer .ant-drawer-body {
+  overflow-wrap: anywhere;
+}
+.workflow-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.workflow-image-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(5, 20, 30, 0.78);
+  color: #d9f7f0;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 3;
+}
+.workflow-image-loading svg {
+  animation: workflow-spin 1.3s linear infinite;
+}
+.workflow-risk-summary {
+  padding: 12px 0;
+}
+.workflow-form .ant-input-number {
+  width: 100%;
+}
+@keyframes workflow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workflow-image-loading svg {
+    animation: none;
+  }
+}
+@media (max-width: 600px) {
+  .workflow-form .risk-input-grid {
+    grid-template-columns: 1fr;
+  }
+  .workflow-downloads > .ant-btn {
+    flex: 1;
+    min-width: 100px;
+  }
+  .workflow-form .ant-form-item {
+    margin-bottom: 20px;
+  }
+}
